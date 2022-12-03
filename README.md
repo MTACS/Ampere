@@ -13,4 +13,4 @@ Available on [Havoc Repo](https://havoc.app/package/ampere)
 
 `make do`
 
-Make sure to set PREFIX and THEOS_DEVICE_IP to your setup and current device
+Make sure to set `PREFIX` and `THEOS_DEVICE_IP` to your setup and current device
