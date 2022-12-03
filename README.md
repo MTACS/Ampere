@@ -7,8 +7,8 @@ Available on [Havoc Repo](https://havoc.app/package/ampere)
 
 ## Building
 
-`git clone https://github.com/MTACS/Ampere.git
-cd Ampere
-make do`
+`git clone https://github.com/MTACS/Ampere.git`
+`cd Ampere`
+`make do`
 
 Make sure to set PREFIX and THEOS_DEVICE_IP to your setup and current device
