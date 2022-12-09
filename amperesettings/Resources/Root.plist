@@ -60,69 +60,53 @@
 			<key>defaults</key>
 			<string>com.mtac.amp</string>
 			<key>label</key>
-			<string>Use Custom Colors</string>
-			<key>subtitle</key>
-			<string>Override fill colors for different modes</string>
-			<key>key</key>
-			<string>overrideColors</string>
-			<key>height</key>
-			<string>70</string>
-			<key>id</key>
-			<string>customColors</string>
-			<key>PostNotification</key>
-			<string>com.mtac.amp/preferences.changed</string>
-		</dict>
-		<dict>
-			<key>cellClass</key>
-			<string>AmpColorCell</string>
-			<key>defaults</key>
-			<string>com.mtac.amp</string>
-			<key>key</key>
-			<string>standardColor</string>
-			<key>label</key>
 			<string>Standard Color</string>
 			<key>subtitle</key>
-			<string>Normal use, not connected to charger</string>
+			<string>Override fill color in normal use. Swipe to set color</string>
+			<key>key</key>
+			<string>overrideColorStandard</string>
 			<key>height</key>
-			<string>70</string>
-			<key>id</key>
-			<string>primaryColor</string>
+			<string>85</string>
 			<key>PostNotification</key>
 			<string>com.mtac.amp/preferences.changed</string>
 		</dict>
 		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
 			<key>cellClass</key>
-			<string>AmpColorCell</string>
+			<string>AmpSwitchCell</string>
+			<key>default</key>
+			<false/>
 			<key>defaults</key>
 			<string>com.mtac.amp</string>
-			<key>key</key>
-			<string>chargingColor</string>
 			<key>label</key>
 			<string>Charging Color</string>
 			<key>subtitle</key>
-			<string>Device is connected to charging source</string>
+			<string>Override fill color when charging. Swipe to set color</string>
+			<key>key</key>
+			<string>overrideColorCharging</string>
 			<key>height</key>
-			<string>70</string>
-			<key>id</key>
-			<string>secondaryColor</string>
+			<string>85</string>
 			<key>PostNotification</key>
 			<string>com.mtac.amp/preferences.changed</string>
 		</dict>
 		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
 			<key>cellClass</key>
-			<string>AmpColorCell</string>
+			<string>AmpSwitchCell</string>
+			<key>default</key>
+			<false/>
 			<key>defaults</key>
 			<string>com.mtac.amp</string>
-			<key>key</key>
-			<string>lowPowerColor</string>
 			<key>label</key>
 			<string>Low Power Color</string>
 			<key>subtitle</key>
-			<string>When Low Power Mode is enabled</string>
+			<string>Override fill colors in Low Power Mode. Swipe to set color</string>
+			<key>key</key>
+			<string>overrideColorLowPower</string>
 			<key>height</key>
-			<string>70</string>
-			<key>id</key>
-			<string>tertiaryColor</string>
+			<string>85</string>
 			<key>PostNotification</key>
 			<string>com.mtac.amp/preferences.changed</string>
 		</dict>
@@ -136,7 +120,7 @@
 			<key>cellClass</key>
 			<string>AmpStepperCell</string>
 			<key>default</key>
-			<real>8</real>
+			<real>10</real>
 			<key>defaults</key>
 			<string>com.mtac.amp</string>
 			<key>key</key>
@@ -146,11 +130,37 @@
 			<key>subtitle</key>
 			<string>Swipe left to reset</string>
 			<key>max</key>
-			<real>10</real>
+			<real>12</real>
 			<key>min</key>
 			<real>4</real>
 			<key>height</key>
 			<string>65</string>
+			<key>PostNotification</key>
+			<string>com.mtac.amp/preferences.changed</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>Bolt</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>cellClass</key>
+			<string>AmpSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>defaults</key>
+			<string>com.mtac.amp</string>
+			<key>label</key>
+			<string>Show Charging Bolt</string>
+			<key>subtitle</key>
+			<string>Moves charging bolt next to battery percentage</string>
+			<key>key</key>
+			<string>showBolt</string>
+			<key>height</key>
+			<string>85</string>
 			<key>PostNotification</key>
 			<string>com.mtac.amp/preferences.changed</string>
 		</dict>

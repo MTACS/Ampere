@@ -53,7 +53,9 @@ static NSString *domain = @"com.mtac.amp";
 @property (nonatomic, retain) UIStepper *control;
 @end
 
-@interface AmpSwitchCell : PSSwitchTableCell <AmpSwitchDelegate>
+@interface AmpSwitchCell : PSSwitchTableCell <AmpSwitchDelegate, UIColorPickerViewControllerDelegate>
+- (void)selectColor;
+- (UIColor *)selectedColor;
 @end
 
 @interface AmpSelectorCell : PSControlTableCell
@@ -71,5 +73,4 @@ static NSString *domain = @"com.mtac.amp";
 @property (nonatomic, retain) UILabel *percentageLabel;
 @property (nonatomic, strong) AmpSwitch *enableSwitch;
 - (void)setEnableSwitchState;
-- (void)updateVisibleSpecifiers;
 @end

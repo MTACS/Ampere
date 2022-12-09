@@ -22,11 +22,6 @@
 		self.enableSwitch.trackOnTintColor = [UIColor secondaryLabelColor];
 		self.enableSwitch.trackOffTintColor = [UIColor secondaryLabelColor];
 		[self setupButtonMenu];
-
-		NSNotificationCenter *center = [NSNotificationCenter defaultCenter];
-		[center addObserver:self selector:@selector(updateBatteryView:) name:UIDeviceBatteryLevelDidChangeNotification object:nil];
-		
-		[UIDevice currentDevice].batteryMonitoringEnabled = YES;
 	}
 	return self;
 }
@@ -40,9 +35,9 @@
 	UIAction *reset = [UIAction actionWithTitle:@"Reset Settings" image:[UIImage systemImageNamed:@"gearshape.fill"] identifier:nil handler:^(__kindof UIAction *_Nonnull action) {
 		[self reset];
 	}];
+	reset.attributes = UIMenuElementAttributesDestructive;
 
 	UIMenu *menuActions = [UIMenu menuWithTitle:@"" children:@[respring, reset]];
-
 	UIBarButtonItem *optionsItem = [[UIBarButtonItem alloc] initWithImage:[UIImage systemImageNamed:@"gearshape.fill"] menu:menuActions];
 	optionsItem.tintColor = [UIColor systemGreenColor];
 
@@ -66,8 +61,6 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
 
-	[self updateVisibleSpecifiers];
-
 	self.navigationItem.largeTitleDisplayMode = UINavigationItemLargeTitleDisplayModeAlways;
 	
 	self.headerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 200, 200)];
@@ -76,7 +69,7 @@
 	self.batteryView = [[UIImageView alloc] initWithFrame:CGRectZero];
 	self.batteryView.contentMode = UIViewContentModeScaleAspectFit;
 	self.batteryView.translatesAutoresizingMaskIntoConstraints = NO;
-	self.batteryView.image = [UIImage systemImageNamed:@"bolt.fill"];
+	self.batteryView.image = [[UIImage systemImageNamed:@"bolt.fill"] imageWithTintColor:[UIColor systemGreenColor]];
 	self.batteryView.tintColor = [UIColor systemGreenColor];
 	self.batteryView.layer.shadowOpacity = 1.0f;
     self.batteryView.layer.shadowOffset = CGSizeZero;
@@ -108,11 +101,12 @@
 	_table.tableHeaderView = self.headerView;
 }
 - (BOOL)shouldReloadSpecifiersOnResume {
-	return NO;
+	return YES;
 }
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
 	tableView.tableHeaderView = self.headerView;
-	return [super tableView:tableView cellForRowAtIndexPath:indexPath];;
+	UITableViewCell *cell = [super tableView:tableView cellForRowAtIndexPath:indexPath];
+	return cell;
 }
 - (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
 	if ([self tableView:tableView titleForHeaderInSection:section] != nil) {
@@ -136,6 +130,9 @@
 				[attachment setImage:[[UIImage systemImageNamed:@"textformat"] imageWithTintColor:[UIColor systemGreenColor]]];
 				break;
 			case 3:
+				[attachment setImage:[[UIImage systemImageNamed:@"bolt.fill"] imageWithTintColor:[UIColor systemGreenColor]]];
+				break;
+			case 4:
 				[attachment setImage:[[UIImage systemImageNamed:@"link"] imageWithTintColor:[UIColor systemGreenColor]]];
 				break;
 			default:
@@ -164,7 +161,7 @@
 		titleLabel.textAlignment = NSTextAlignmentCenter;
 		
 		NSString *primary = @"Ampere";
-		NSString *secondary = @"v1.0.3 © MTAC";
+		NSString *secondary = @"v1.0.4 © MTAC";
 
 		NSMutableAttributedString *final = [[NSMutableAttributedString alloc] initWithString:[NSString stringWithFormat:@"%@\n%@", primary, secondary]];
 		[final addAttribute:NSFontAttributeName value:[UIFont systemFontOfSize:18 weight:UIFontWeightSemibold] range:[final.string rangeOfString:primary]];
@@ -198,53 +195,51 @@
 - (UISwipeActionsConfiguration *)tableView:(UITableView *)tableView trailingSwipeActionsConfigurationForRowAtIndexPath:(NSIndexPath *)indexPath {
 	UISwipeActionsConfiguration *swipeActions;
 	PSTableCell *cell = (PSTableCell *)[tableView cellForRowAtIndexPath:indexPath];
-	if (indexPath.section == 0) {
-		if (indexPath.row == 0) {
-			UIContextualAction *info = [UIContextualAction contextualActionWithStyle:UIContextualActionStyleNormal title:nil handler:^(UIContextualAction * _Nonnull action, __kindof UIView * _Nonnull sourceView, void (^ _Nonnull completionHandler)(BOOL)) {
-            	UIAlertController *alertController = [UIAlertController alertControllerWithTitle:@"Transparent Text" message:@"\nEnabling transparent text allows the background of the current app to show through the battery's percentage text. This is done to replicate iOS 16's styling, and works best on Homescreen & Lockscreen" preferredStyle:UIAlertControllerStyleAlert];
-				[alertController addAction:[UIAlertAction actionWithTitle:@"Dismiss" style:UIAlertActionStyleDefault handler:nil]];
-				[self presentViewController:alertController animated:YES completion:nil];
-				completionHandler(YES);
-			}];
+	NSMutableArray *actions = [NSMutableArray new];
+	if ([cell isKindOfClass:NSClassFromString(@"AmpSwitchCell")] && indexPath.section == 1) {
+		UIContextualAction *colorPickerAction = [UIContextualAction contextualActionWithStyle:UIContextualActionStyleNormal title:nil handler:^(UIContextualAction * _Nonnull action, __kindof UIView * _Nonnull sourceView, void (^ _Nonnull completionHandler)(BOOL)) {
+			[(AmpSwitchCell *)cell selectColor];
+			completionHandler(YES);
+		}];
+		colorPickerAction.backgroundColor = [(AmpSwitchCell *)cell selectedColor]; // [UIColor tableCellGroupedBackgroundColor];
+		colorPickerAction.image = [UIImage systemImageNamed:@"paintbrush.pointed.fill"];
+		if ([[[NSUserDefaults standardUserDefaults] objectForKey:cell.specifier.properties[@"key"] inDomain:domain] boolValue]) {
+			[actions addObject:colorPickerAction];
+		}
+	} else {
+		if (indexPath.section == 0) {
+			if (indexPath.row == 0) {
+				UIContextualAction *info = [UIContextualAction contextualActionWithStyle:UIContextualActionStyleNormal title:nil handler:^(UIContextualAction * _Nonnull action, __kindof UIView * _Nonnull sourceView, void (^ _Nonnull completionHandler)(BOOL)) {
+					UIAlertController *alertController = [UIAlertController alertControllerWithTitle:@"Transparent Text" message:@"\nEnabling transparent text allows the background of the current app to show through the battery's percentage text. This is done to replicate iOS 16's styling, and works best on Homescreen & Lockscreen" preferredStyle:UIAlertControllerStyleAlert];
+					[alertController addAction:[UIAlertAction actionWithTitle:@"Dismiss" style:UIAlertActionStyleDefault handler:nil]];
+					[self presentViewController:alertController animated:YES completion:nil];
+					completionHandler(YES);
+				}];
 
-			info.backgroundColor = [UIColor tableCellGroupedBackgroundColor];
-			info.image = [UIImage systemImageNamed:@"info.circle.fill"];
+				info.backgroundColor = [UIColor tableCellGroupedBackgroundColor];
+				info.image = [UIImage systemImageNamed:@"info.circle.fill"];
 
-			swipeActions = [UISwipeActionsConfiguration configurationWithActions:@[info]];
+				[actions addObject:info];
+			}
+		} else if (indexPath.section == 2) {
+			if (indexPath.row == 0) {
+				UIContextualAction *reset = [UIContextualAction contextualActionWithStyle:UIContextualActionStyleNormal title:nil handler:^(UIContextualAction * _Nonnull action, __kindof UIView * _Nonnull sourceView, void (^ _Nonnull completionHandler)(BOOL)) {
+					[[NSUserDefaults standardUserDefaults] setObject:@8 forKey:@"fontSize" inDomain:domain];
+					[[NSUserDefaults standardUserDefaults] synchronize];
+					[self reloadSpecifier:cell.specifier];
+					completionHandler(YES);
+				}];
+
+				reset.backgroundColor = [UIColor tableCellGroupedBackgroundColor];
+				reset.image = [UIImage systemImageNamed:@"arrow.counterclockwise.circle"];
+
+				[actions addObject:reset];
+			}
 		}
 	}
-	if (indexPath.section == 2) {
-		if (indexPath.row == 0) {
-			UIContextualAction *reset = [UIContextualAction contextualActionWithStyle:UIContextualActionStyleNormal title:nil handler:^(UIContextualAction * _Nonnull action, __kindof UIView * _Nonnull sourceView, void (^ _Nonnull completionHandler)(BOOL)) {
-            	[[NSUserDefaults standardUserDefaults] setObject:@8 forKey:@"fontSize" inDomain:domain];
-				[[NSUserDefaults standardUserDefaults] synchronize];
-				[self reloadSpecifier:cell.specifier];
-				completionHandler(YES);
-			}];
-
-			reset.backgroundColor = [UIColor tableCellGroupedBackgroundColor];
-			reset.image = [UIImage systemImageNamed:@"arrow.counterclockwise.circle"];
-
-			swipeActions = [UISwipeActionsConfiguration configurationWithActions:@[reset]];
-		}
-	}
+	swipeActions = [UISwipeActionsConfiguration configurationWithActions:actions];
 	swipeActions.performsFirstActionWithFullSwipe = YES;
 	return swipeActions;
-}
-- (void)updateVisibleSpecifiers {
-	[self reloadSpecifiers];
-	PSSpecifier *primaryColorSpecifier = [self specifierForID:@"primaryColor"];
-	PSSpecifier *secondaryColorSpecifier = [self specifierForID:@"secondaryColor"];
-	PSSpecifier *tertiaryColorSpecifier = [self specifierForID:@"tertiaryColor"];
-	PSSpecifier *textColorSpecifier = [self specifierForID:@"textColor"];
-	
-	if (![[[NSUserDefaults standardUserDefaults] objectForKey:@"overrideColors" inDomain:domain] boolValue]) {
-		[self removeContiguousSpecifiers:@[primaryColorSpecifier, secondaryColorSpecifier, tertiaryColorSpecifier] animated:NO];
-	}
-
-	if ([[[NSUserDefaults standardUserDefaults] objectForKey:@"textStyle" inDomain:domain] integerValue] != 2) {
-		[self removeContiguousSpecifiers:@[textColorSpecifier] animated:NO];
-	}
 }
 - (void)setEnableSwitchState {
 	if (![[[NSUserDefaults standardUserDefaults] objectForKey:@"enabled" inDomain:domain] boolValue]) {
@@ -270,10 +265,7 @@
 }
 - (void)setPreferenceValue:(id)value specifier:(PSSpecifier *)specifier {
 	[super setPreferenceValue:value specifier:specifier];
-	if ([specifier.properties[@"key"] isEqualToString:@"overrideColors"] || [specifier.properties[@"key"] isEqualToString:@"transparentText"]) {
-		[self updateVisibleSpecifiers];
-		CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), (CFStringRef)@"com.mtac.amp/statusbar.changed", nil, nil, true);
-	}
+	CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), (CFStringRef)@"com.mtac.amp/statusbar.changed", nil, nil, true);
 }
 - (void)respring {
 	UIActivityIndicatorView *indicator = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleLarge];
@@ -318,8 +310,16 @@
 		self.accessoryView = self.control;
 		self.detailTextLabel.text = [specifier.properties objectForKey:@"subtitle"];
 		self.detailTextLabel.numberOfLines = 2;
+		[self setCellEnabled:[[[NSUserDefaults standardUserDefaults] objectForKey:@"textStyle" inDomain:domain] integerValue] == 2];
 	}
 	return self;
+}
+- (void)setCellEnabled:(BOOL)cellEnabled {
+	[super setCellEnabled:cellEnabled];
+	self.control.hidden = !cellEnabled;
+}
+- (BOOL)cellEnabled {
+	return [[[NSUserDefaults standardUserDefaults] objectForKey:@"textStyle" inDomain:domain] integerValue] == 2;
 }
 - (void)refreshCellContentsWithSpecifier:(PSSpecifier *)specifier {
 	[super refreshCellContentsWithSpecifier:specifier];
@@ -344,11 +344,11 @@
 	[[self _viewControllerForAncestor] presentViewController:colorPickerController animated:YES completion:nil]; 
 }
 - (UIColor *)selectedColor {
-	NSDictionary *colorDict = [[NSUserDefaults standardUserDefaults] objectForKey:self.specifier.properties[@"key"] inDomain:domain];
+	NSDictionary *colorDict = [[NSUserDefaults standardUserDefaults] objectForKey:[self.specifier.properties[@"key"] stringByAppendingString:@"Dict"] inDomain:domain];
 	return colorDict ? [UIColor colorWithRed:[colorDict[@"red"] floatValue] green:[colorDict[@"green"] floatValue] blue:[colorDict[@"blue"] floatValue] alpha:1.0] : [UIColor secondaryLabelColor];
 }
 - (void)colorPickerViewControllerDidSelectColor:(UIColorPickerViewController *)viewController {
-	[[NSUserDefaults standardUserDefaults] setObject:[self dictionaryForColor:viewController.selectedColor] forKey:self.specifier.properties[@"key"] inDomain:domain];
+	[[NSUserDefaults standardUserDefaults] setObject:[self dictionaryForColor:viewController.selectedColor] forKey:[self.specifier.properties[@"key"] stringByAppendingString:@"Dict"] inDomain:domain];
 	[[NSUserDefaults standardUserDefaults] synchronize];
 	self.control.backgroundColor = [self selectedColor];
 	CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), (CFStringRef)@"com.mtac.amp/statusbar.changed", nil, nil, true);
@@ -376,8 +376,8 @@
 }
 - (void)refreshCellContentsWithSpecifier:(PSSpecifier *)specifier {
 	[super refreshCellContentsWithSpecifier:specifier];
-	self.control.minimumValue = 4.0;
-	self.control.maximumValue = 10.0;
+	self.control.minimumValue = [specifier.properties[@"min"] doubleValue];
+	self.control.maximumValue = [specifier.properties[@"max"] doubleValue];
 	[self _updateLabel];
 }
 - (void)setCellEnabled:(BOOL)cellEnabled {
@@ -436,6 +436,33 @@
 }
 - (void)switchStateChanged:(AmpSwitchState)currentState {
 	AudioServicesPlaySystemSound(1519);
+}
+- (void)selectColor {
+	UIColorPickerViewController *colorPickerController = [[UIColorPickerViewController alloc] init];
+	colorPickerController.delegate = self;
+	colorPickerController.supportsAlpha = NO;
+	colorPickerController.modalPresentationStyle = UIModalPresentationPageSheet;
+	colorPickerController.modalInPresentation = YES;
+	colorPickerController.selectedColor = [self selectedColor];
+	[[self _viewControllerForAncestor] presentViewController:colorPickerController animated:YES completion:nil]; 
+}
+- (UIColor *)selectedColor {
+	NSDictionary *colorDict = [[NSUserDefaults standardUserDefaults] objectForKey:[self.specifier.properties[@"key"] stringByAppendingString:@"Dict"] inDomain:domain];
+	return colorDict ? [UIColor colorWithRed:[colorDict[@"red"] floatValue] green:[colorDict[@"green"] floatValue] blue:[colorDict[@"blue"] floatValue] alpha:1.0] : [UIColor secondaryLabelColor];
+}
+- (void)colorPickerViewControllerDidSelectColor:(UIColorPickerViewController *)viewController {
+	[[NSUserDefaults standardUserDefaults] setObject:[self dictionaryForColor:viewController.selectedColor] forKey:[self.specifier.properties[@"key"] stringByAppendingString:@"Dict"] inDomain:domain];
+	[[NSUserDefaults standardUserDefaults] synchronize];
+
+	CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), (CFStringRef)@"com.mtac.amp/statusbar.changed", nil, nil, true);
+}
+- (NSDictionary *)dictionaryForColor:(UIColor *)color {
+	const CGFloat *components = CGColorGetComponents(color.CGColor);
+	NSMutableDictionary *colorDict = [NSMutableDictionary new];
+	[colorDict setObject:[NSNumber numberWithFloat:components[0]] forKey:@"red"];
+	[colorDict setObject:[NSNumber numberWithFloat:components[1]] forKey:@"green"];
+	[colorDict setObject:[NSNumber numberWithFloat:components[2]] forKey:@"blue"];
+	return colorDict;
 }
 @end
 
@@ -502,6 +529,7 @@
 	[self _updateControl];
 }
 - (void)_updateControl {
+	CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), (CFStringRef)@"com.mtac.amp/preferences.changed", nil, nil, true);
 	CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), (CFStringRef)@"com.mtac.amp/statusbar.changed", nil, nil, true);
 	NSString *title;
 	switch ([[[NSUserDefaults standardUserDefaults] objectForKey:@"textStyle" inDomain:domain] integerValue]) {
@@ -518,8 +546,7 @@
 	}
 	[(UIButton *)self.control setTitle:title forState:UIControlStateNormal];
 	[(UIButton *)self.control setMenu:[self menu]];
-
-	[[self _viewControllerForAncestor] updateVisibleSpecifiers];
+	[[self _viewControllerForAncestor] reloadSpecifiers];
 }
 @end
 
