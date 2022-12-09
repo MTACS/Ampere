@@ -168,6 +168,34 @@
 			<key>cell</key>
 			<string>PSGroupCell</string>
 			<key>label</key>
+			<string>Gestures</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>cellClass</key>
+			<string>AmpSwitchCell</string>
+			<key>default</key>
+			<false/>
+			<key>defaults</key>
+			<string>com.mtac.amp</string>
+			<key>label</key>
+			<string>Use Low Power Gesture</string>
+			<key>subtitle</key>
+			<string>Toggle Low Power mode by tapping on Status Bar battery</string>
+			<key>key</key>
+			<string>useGesture</string>
+			<key>height</key>
+			<string>85</string>
+			<key>id</key>
+			<string>lowPower</string>
+			<key>PostNotification</key>
+			<string>com.mtac.amp/preferences.changed</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
 			<string>Source</string>
 		</dict>
 		<dict>

@@ -106,6 +106,14 @@
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
 	tableView.tableHeaderView = self.headerView;
 	UITableViewCell *cell = [super tableView:tableView cellForRowAtIndexPath:indexPath];
+	if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPad) {
+		if (indexPath.section == 4) {
+			if (indexPath.row == 0) {
+				[(PSTableCell *)cell setCellEnabled:NO];
+				[(PSTableCell *)cell.detailTextLabel setText:@"Not available on iPad"];
+			}
+		}
+	}
 	return cell;
 }
 - (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
@@ -133,6 +141,9 @@
 				[attachment setImage:[[UIImage systemImageNamed:@"bolt.fill"] imageWithTintColor:[UIColor systemGreenColor]]];
 				break;
 			case 4:
+				[attachment setImage:[[UIImage systemImageNamed:@"hand.point.up.fill"] imageWithTintColor:[UIColor systemGreenColor]]];
+				break;
+			case 5:
 				[attachment setImage:[[UIImage systemImageNamed:@"link"] imageWithTintColor:[UIColor systemGreenColor]]];
 				break;
 			default:
