@@ -3,7 +3,7 @@
 #import "AmpSwitch.h"
 #import "spawn.h"
 
-#define BATTERY_IMAGE @"/Library/Application Support/Ampere/battery.png" // default image
+#define SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(v)  ([[[UIDevice currentDevice] systemVersion] compare:v options:NSNumericSearch] != NSOrderedAscending)
 
 static NSString *domain = @"com.mtac.amp";
 

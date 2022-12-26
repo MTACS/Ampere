@@ -182,7 +182,7 @@
 			<key>label</key>
 			<string>Use Low Power Gesture</string>
 			<key>subtitle</key>
-			<string>Toggle Low Power mode by tapping on Status Bar battery</string>
+			<string>Tap to toggle Low Power mode. SpringBoard only</string>
 			<key>key</key>
 			<string>useGesture</string>
 			<key>height</key>

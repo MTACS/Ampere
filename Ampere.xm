@@ -1,7 +1,11 @@
 #import <UIKit/UIKit.h>
 #import "spawn.h"
 
-#define BATTERY_IMAGE @"/Library/Application Support/Ampere/battery.png"
+#define ROOT_PATH_NS(path)([[NSFileManager defaultManager] fileExistsAtPath:path] ? path : [@"/var/jb" stringByAppendingPathComponent:path])
+#ifndef kCFCoreFoundationVersionNumber_iOS_16_0
+#define kCFCoreFoundationVersionNumber_iOS_16_0 1946.10
+#endif
+#define kSLSystemVersioniOS16 kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_16_0
 
 extern NSString *const kCAFilterDestOut;
 
@@ -74,13 +78,7 @@ static NSInteger fontSize;
 @property (nonatomic) NSInteger state;
 @end
 
-%group Ampere
-%hook _UIStatusBarDataBatteryEntry
-- (NSString *)detailString {
-	return showBolt ? @"" : %orig; // Return empty string to keep automatic sizing
-}
-%end
-
+%group XV // iOS 15.x or lower only
 %hook _UIStatusBarBatteryItem
 + (id)staticIconDisplayIdentifier {
 	return [self iconDisplayIdentifier]; // Override static identifier, used in iPhone Control Center & everywhere on iPad
@@ -100,7 +98,6 @@ static NSInteger fontSize;
 }
 %new
 - (void)toggleLowPower:(id)sender {
-	NSLog(@"[+] AMPERE DEBUG: TLPM -> %@", sender);
 	NSInteger lpm = [[%c(_CDBatterySaver) batterySaver] getPowerMode];
 	[[%c(_CDBatterySaver) batterySaver] setPowerMode:(lpm == 1) ? 0 : 1 error:nil];
 }
@@ -142,10 +139,11 @@ static NSInteger fontSize;
 }
 - (void)_updatePercentage {
 	%orig;
+	// self.percentageLabel.font = [UIFont fontWithName:@".SFUI-SemiCondensedBold" size:((self.chargingState == 1 || self.chargePercent == 1.0) && fontSize > 10) ? 10 : fontSize];
 	self.percentageLabel.font = [UIFont systemFontOfSize:((self.chargingState == 1 || self.chargePercent == 1.0) && fontSize > 10) ? 10 : fontSize weight:UIFontWeightBold]; // Set custom percentage font size
 	if (showBolt && self.chargingState == 1) { // Show bolt next to percentage label text
 		NSTextAttachment *attachment = [[NSTextAttachment alloc] init];
-		[attachment setBounds:CGRectMake(0, 0, roundf(self.percentageLabel.font.capHeight * 0.5), roundf(self.percentageLabel.font.capHeight))];
+		[attachment setBounds:CGRectMake(0, 0, roundf(self.percentageLabel.font.capHeight * 0.6), roundf(self.percentageLabel.font.capHeight))];
 		[attachment setImage:[[UIImage systemImageNamed:@"bolt.fill"] imageWithTintColor:[self _batteryTextColor]]];
 	
 		NSMutableAttributedString *atr = [[NSMutableAttributedString alloc] initWithString:self.percentageLabel.text];
@@ -167,6 +165,35 @@ static NSInteger fontSize;
 - (CGFloat)bodyColorAlpha {
 	return 1.0; // Overrides default fill color alpha (normally 0.4)
 }
+- (UIColor *)pinColor {
+	return (self.chargePercent > 0.97) ? [self _batteryFillColor] : %orig; // Set pin color to fill color, but only when charge exceeds frame of regular battery body
+}
++ (id)_pinBezierPathForSize:(struct CGSize )arg0 complex:(BOOL)arg1 {
+	UIBezierPath *path = %orig;
+	[path applyTransform:CGAffineTransformMakeTranslation(1, 0)]; // Shift pin 1 px, done because setting line interspace width to fill body adds border
+	return path;
+}
+- (void)_updateFillLayer {
+	%orig;
+	[self.fillLayer setCornerRadius:([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPad) ? 4.0 : 3.5]; // Set fill corner radius whenever layer updates
+}
+%end
+%end
+
+%group Ampere // All versions
+%hook _UIStatusBarDataBatteryEntry
+- (NSString *)detailString {
+	return @""; // Return empty string to keep automatic sizing
+}
+%end
+
+%hook _UIStaticBatteryView
+- (void)setShowsPercentage:(BOOL)arg0 {
+	%orig(YES);
+}
+%end
+
+%hook _UIBatteryView
 - (id)_batteryTextColor {
 	if (textStyle == 2) { // Use custom percentage text color
 		NSDictionary *textColorDict = [[NSUserDefaults standardUserDefaults] objectForKey:@"textColorDict" inDomain:domain];
@@ -191,18 +218,6 @@ static NSInteger fontSize;
 		return lowPowerColor;
 	}
 	return %orig;
-}
-- (UIColor *)pinColor {
-	return (self.chargePercent > 0.97) ? [self _batteryFillColor] : %orig; // Set pin color to fill color, but only when charge exceeds frame of regular battery body
-}
-+ (id)_pinBezierPathForSize:(struct CGSize )arg0 complex:(BOOL)arg1 {
-	UIBezierPath *path = %orig;
-	[path applyTransform:CGAffineTransformMakeTranslation(1, 0)]; // Shift pin 1 px, done because setting line interspace width to fill body adds border
-	return path;
-}
-- (void)_updateFillLayer {
-	%orig;
-	[self.fillLayer setCornerRadius:([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPad) ? 4.0 : 3.5]; // Set fill corner radius whenever layer updates
 }
 %end
 %end
@@ -236,6 +251,9 @@ static void loadPreferences(CFNotificationCenterRef center, void *observer, CFSt
 	CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, loadPreferences, (CFStringRef)preferencesNotification, NULL, CFNotificationSuspensionBehaviorCoalesce); // Preferences changed
 	CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, reloadStatusBar, (CFStringRef)statusBarNotification, NULL, CFNotificationSuspensionBehaviorCoalesce); // Update status bar
 	if (enabled) {
-		%init(Ampere); // Initialize group
+		%init(Ampere);
+		if (!(kSLSystemVersioniOS16)) {
+			%init(XV);
+		}
 	}
 }

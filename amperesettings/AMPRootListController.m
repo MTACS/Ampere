@@ -47,6 +47,7 @@
 	[super viewWillAppear:animated];
 
 	[self setEnableSwitchState];
+	[self updateSpecifiers];
 
 	self.view.tintColor = [UIColor systemGreenColor];
 	[[UIApplication sharedApplication] keyWindow].tintColor = [UIColor systemGreenColor];
@@ -99,6 +100,20 @@
 		[self.batteryView.topAnchor constraintEqualToAnchor:self.headerView.topAnchor constant:30],
 	]];
 	_table.tableHeaderView = self.headerView;
+}
+- (void)updateSpecifiers {
+	if (SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"16.0")) {
+		NSArray *fontSpecifiers = [self specifiersInGroup:2];
+		NSArray *boltSpecifiers = [self specifiersInGroup:3];
+		NSArray *gestureSpecifiers = [self specifiersInGroup:4];
+		[self removeContiguousSpecifiers:fontSpecifiers animated:NO];
+		[self removeContiguousSpecifiers:boltSpecifiers animated:NO];
+		[self removeContiguousSpecifiers:gestureSpecifiers animated:NO];
+	}
+}
+- (void)reloadSpecifiers {
+	[super reloadSpecifiers];
+	[self updateSpecifiers];
 }
 - (BOOL)shouldReloadSpecifiersOnResume {
 	return YES;
@@ -172,7 +187,7 @@
 		titleLabel.textAlignment = NSTextAlignmentCenter;
 		
 		NSString *primary = @"Ampere";
-		NSString *secondary = @"v1.0.4 © MTAC";
+		NSString *secondary = @"v1.0.6 © MTAC";
 
 		NSMutableAttributedString *final = [[NSMutableAttributedString alloc] initWithString:[NSString stringWithFormat:@"%@\n%@", primary, secondary]];
 		[final addAttribute:NSFontAttributeName value:[UIFont systemFontOfSize:18 weight:UIFontWeightSemibold] range:[final.string rangeOfString:primary]];
