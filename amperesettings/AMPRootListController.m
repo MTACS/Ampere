@@ -1,5 +1,7 @@
 #include "AMPRootListController.h"
 
+#define ROOT_PATH(path)([[NSFileManager defaultManager] fileExistsAtPath:path] ? path : [@"/var/jb" stringByAppendingPathComponent:path])
+
 @import SafariServices;
 
 @implementation AMPRootListController
@@ -47,12 +49,11 @@
 	[super viewWillAppear:animated];
 
 	[self setEnableSwitchState];
-	[self updateSpecifiers];
+	[self reloadSpecifiers];
 
 	self.view.tintColor = [UIColor systemGreenColor];
 	[[UIApplication sharedApplication] keyWindow].tintColor = [UIColor systemGreenColor];
-	[self.navigationController.navigationBar setPrefersLargeTitles:YES];
-	[self.navigationController.navigationItem.navigationBar sizeToFit];
+	[self.navigationController.navigationBar setPrefersLargeTitles:NO];
 	_table.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
 }
 - (void)viewWillDisappear:(BOOL)animated {
@@ -64,8 +65,8 @@
 
 	self.navigationItem.largeTitleDisplayMode = UINavigationItemLargeTitleDisplayModeAlways;
 	
-	self.headerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 200, 200)];
-    self.enableSwitch.translatesAutoresizingMaskIntoConstraints = NO;
+	self.headerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 200, 300)];
+	self.enableSwitch.translatesAutoresizingMaskIntoConstraints = NO;
 
 	self.batteryView = [[UIImageView alloc] initWithFrame:CGRectZero];
 	self.batteryView.contentMode = UIViewContentModeScaleAspectFit;
@@ -79,99 +80,150 @@
 	CABasicAnimation *glowanimation = [CABasicAnimation animation];
 	glowanimation.keyPath = @"shadowRadius";
 	glowanimation.fromValue = @0;
-	glowanimation.toValue = @15;
+	glowanimation.toValue = @10;
 	glowanimation.autoreverses = YES;
 	glowanimation.duration = 1.0;
 	glowanimation.repeatCount = HUGE_VALF;
-
 	[self.batteryView.layer addAnimation:glowanimation forKey:@"glow"];
+
+	UILabel *titleLabel = [[UILabel alloc] initWithFrame:CGRectZero];
+	titleLabel.text = @"Ampere";
+	titleLabel.textColor = [UIColor labelColor];
+	titleLabel.font = [UIFont systemFontOfSize:36.0f weight:UIFontWeightBold];
+	titleLabel.textAlignment = NSTextAlignmentCenter;
+	titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
+
+	self.segmentedControl = [[UISegmentedControl alloc] initWithItems:@[@"Charging", @"Normal", @"Low Power", @"Critical"]];
+	self.segmentedControl.translatesAutoresizingMaskIntoConstraints = NO;
+	self.segmentedControl.frame = CGRectZero;
+	self.segmentedControl.selectedSegmentIndex = [[[NSUserDefaults standardUserDefaults] objectForKey:@"preferenceSection" inDomain:domain] integerValue] ?: 0;    
+	self.segmentedControl.backgroundColor = [UIColor systemBackgroundColor];
+	self.segmentedControl.selectedSegmentTintColor = [UIColor tableCellGroupedBackgroundColor];
+	[self.segmentedControl addTarget:self action:@selector(segmentChanged:) forControlEvents: UIControlEventValueChanged];
+	[self.segmentedControl setDividerImage:[UIImage new] forLeftSegmentState:UIControlStateNormal rightSegmentState:UIControlStateNormal barMetrics:UIBarMetricsDefault];
+
+	[[UISegmentedControl appearance] setTitleTextAttributes:@{NSForegroundColorAttributeName: [UIColor labelColor]} forState:UIControlStateSelected];
+	[[UISegmentedControl appearance] setTitleTextAttributes:@{NSForegroundColorAttributeName: [UIColor secondaryLabelColor]} forState:UIControlStateNormal];
+
+	self.sectionSegmentLabel = [[UILabel alloc] initWithFrame:CGRectZero];
+	self.sectionSegmentLabel.translatesAutoresizingMaskIntoConstraints = NO;
+	self.sectionSegmentLabel.font = [UIFont systemFontOfSize:14 weight:UIFontWeightSemibold];
+	self.sectionSegmentLabel.textColor = [UIColor secondaryLabelColor];
+	self.sectionSegmentLabel.textAlignment = NSTextAlignmentCenter;
+	self.sectionSegmentLabel.text = @"ꜜ Select Battery Mode to Configure ꜜ";
 
 	[self.headerView addSubview:self.enableSwitch];
 	[self.headerView addSubview:self.batteryView];
+	[self.headerView addSubview:self.sectionSegmentLabel];
+	[self.headerView addSubview:self.segmentedControl];
+	[self.headerView addSubview:titleLabel];
 
     [NSLayoutConstraint activateConstraints:@[
-       	[self.enableSwitch.bottomAnchor constraintEqualToAnchor:self.headerView.bottomAnchor constant:-20],
-		[self.enableSwitch.centerXAnchor constraintEqualToAnchor:self.headerView.centerXAnchor],
+		[self.batteryView.widthAnchor constraintEqualToConstant:50],
+		[self.batteryView.heightAnchor constraintEqualToConstant:75],
+		[self.batteryView.trailingAnchor constraintEqualToAnchor:self.headerView.centerXAnchor constant:-20],
+		[self.batteryView.topAnchor constraintEqualToAnchor:self.headerView.topAnchor],
+		[self.enableSwitch.centerYAnchor constraintEqualToAnchor:self.batteryView.centerYAnchor],
+		[self.enableSwitch.leadingAnchor constraintEqualToAnchor:self.headerView.centerXAnchor constant:20],
 		[self.enableSwitch.widthAnchor constraintEqualToConstant:50],
 		[self.enableSwitch.heightAnchor constraintEqualToConstant:40],
-		[self.batteryView.widthAnchor constraintEqualToConstant:150],
-		[self.batteryView.heightAnchor constraintEqualToConstant:75],
-		[self.batteryView.centerXAnchor constraintEqualToAnchor:self.headerView.centerXAnchor constant:0],
-		[self.batteryView.topAnchor constraintEqualToAnchor:self.headerView.topAnchor constant:30],
+		[titleLabel.topAnchor constraintEqualToAnchor:self.batteryView.bottomAnchor constant:10],
+		[titleLabel.leadingAnchor constraintEqualToAnchor:self.headerView.leadingAnchor],
+		[titleLabel.trailingAnchor constraintEqualToAnchor:self.headerView.trailingAnchor],
+		[titleLabel.heightAnchor constraintEqualToConstant:50],
+		[self.segmentedControl.bottomAnchor constraintEqualToAnchor:self.headerView.bottomAnchor constant:-30],
+		[self.segmentedControl.leadingAnchor constraintEqualToAnchor:self.headerView.leadingAnchor constant:16],
+		[self.segmentedControl.trailingAnchor constraintEqualToAnchor:self.headerView.trailingAnchor constant:-16],
+		[self.segmentedControl.heightAnchor constraintEqualToConstant:40],
+		[self.sectionSegmentLabel.bottomAnchor constraintEqualToAnchor:self.segmentedControl.topAnchor constant:-5],
+		[self.sectionSegmentLabel.heightAnchor constraintEqualToConstant:40],
+		[self.sectionSegmentLabel.centerXAnchor constraintEqualToAnchor:self.headerView.centerXAnchor],
+		[self.sectionSegmentLabel.widthAnchor constraintEqualToAnchor:self.segmentedControl.widthAnchor],
 	]];
 	_table.tableHeaderView = self.headerView;
 }
-- (void)updateSpecifiers {
-	if (SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"16.0")) {
-		NSArray *fontSpecifiers = [self specifiersInGroup:2];
-		NSArray *boltSpecifiers = [self specifiersInGroup:3];
-		NSArray *gestureSpecifiers = [self specifiersInGroup:4];
-		[self removeContiguousSpecifiers:fontSpecifiers animated:NO];
-		[self removeContiguousSpecifiers:boltSpecifiers animated:NO];
-		[self removeContiguousSpecifiers:gestureSpecifiers animated:NO];
+- (void)segmentChanged:(UISegmentedControl *)segmentControl {
+	[[NSUserDefaults standardUserDefaults] setObject:[NSNumber numberWithInt:segmentControl.selectedSegmentIndex] forKey:@"preferenceSection" inDomain:domain];
+	[self reloadSpecifiers];
+}
+- (void)tableView:(UITableView *)tableView willDisplayCell:(UITableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)indexPath {
+	PSTableCell *tableCell = (PSTableCell *)cell;
+	if (([tableCell.specifier.properties[@"id"] isEqualToString:@"fontSize"] || [tableCell.specifier.properties[@"id"] isEqualToString:@"showBolt"]) && SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"16.0")) {
+		[tableCell setCellEnabled:NO];
 	}
 }
 - (void)reloadSpecifiers {
 	[super reloadSpecifiers];
-	[self updateSpecifiers];
-}
-- (BOOL)shouldReloadSpecifiersOnResume {
-	return YES;
+	switch (self.segmentedControl.selectedSegmentIndex) {
+		case 0:
+			[self removeContiguousSpecifiers:@[[self specifierForID:@"overrideColorStandard"]] animated:NO];
+			[self removeContiguousSpecifiers:@[[self specifierForID:@"overrideColorLowPower"]] animated:NO];
+			[self removeContiguousSpecifiers:@[[self specifierForID:@"overrideColorCritical"]] animated:NO];
+			break;
+		case 1:
+			[self removeContiguousSpecifiers:@[[self specifierForID:@"overrideColorCharging"]] animated:NO];
+			[self removeContiguousSpecifiers:@[[self specifierForID:@"overrideColorLowPower"]] animated:NO];
+			[self removeContiguousSpecifiers:@[[self specifierForID:@"overrideColorCritical"]] animated:NO];
+			break;
+		case 2:
+			[self removeContiguousSpecifiers:@[[self specifierForID:@"overrideColorStandard"]] animated:NO];
+			[self removeContiguousSpecifiers:@[[self specifierForID:@"overrideColorCharging"]] animated:NO];
+			[self removeContiguousSpecifiers:@[[self specifierForID:@"overrideColorCritical"]] animated:NO];
+			break;
+		case 3:
+			[self removeContiguousSpecifiers:@[[self specifierForID:@"overrideColorStandard"]] animated:NO];
+			[self removeContiguousSpecifiers:@[[self specifierForID:@"overrideColorLowPower"]] animated:NO];
+			[self removeContiguousSpecifiers:@[[self specifierForID:@"overrideColorCharging"]] animated:NO];
+			break;
+	}
 }
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
 	tableView.tableHeaderView = self.headerView;
-	UITableViewCell *cell = [super tableView:tableView cellForRowAtIndexPath:indexPath];
-	if ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPad) {
-		if (indexPath.section == 4) {
-			if (indexPath.row == 0) {
-				[(PSTableCell *)cell setCellEnabled:NO];
-				[(PSTableCell *)cell.detailTextLabel setText:@"Not available on iPad"];
-			}
-		}
-	}
-	return cell;
+	return [super tableView:tableView cellForRowAtIndexPath:indexPath];
 }
 - (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
-	if ([self tableView:tableView titleForHeaderInSection:section] != nil) {
+	UIView *sectionHeader = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 200, 30)];
+	UIImage *sectionImage;
+	UIImageView *sectionImageView = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, 30, 30)];
+	sectionImageView.translatesAutoresizingMaskIntoConstraints = NO;
+	sectionImageView.contentMode = UIViewContentModeScaleAspectFit;
 
-		UILabel *titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, 200, 30)];
-		titleLabel.textColor = [UIColor secondaryLabelColor];
-		titleLabel.font = [UIFont systemFontOfSize:20 weight:UIFontWeightSemibold];
-		titleLabel.text = [self tableView:tableView titleForHeaderInSection:section];
-
-		NSTextAttachment *attachment = [[NSTextAttachment alloc] init];
-		[attachment setBounds:CGRectMake(0, 0, roundf(titleLabel.font.capHeight * 1.5), roundf(titleLabel.font.capHeight))];
-		
-		switch (section) {
-			case 0:
-				[attachment setImage:[[UIImage systemImageNamed:@"bolt.fill.batteryblock.fill"] imageWithTintColor:[UIColor systemGreenColor]]];
-				break;
-			case 1:
-				[attachment setImage:[[UIImage systemImageNamed:@"paintpalette.fill"] imageWithTintColor:[UIColor systemGreenColor]]];
-				break;
-			case 2:
-				[attachment setImage:[[UIImage systemImageNamed:@"textformat"] imageWithTintColor:[UIColor systemGreenColor]]];
-				break;
-			case 3:
-				[attachment setImage:[[UIImage systemImageNamed:@"bolt.fill"] imageWithTintColor:[UIColor systemGreenColor]]];
-				break;
-			case 4:
-				[attachment setImage:[[UIImage systemImageNamed:@"hand.point.up.fill"] imageWithTintColor:[UIColor systemGreenColor]]];
-				break;
-			case 5:
-				[attachment setImage:[[UIImage systemImageNamed:@"link"] imageWithTintColor:[UIColor systemGreenColor]]];
-				break;
-			default:
-				break;
-		}
-
-		NSMutableAttributedString *baseString = [[NSMutableAttributedString alloc] initWithAttributedString:[NSAttributedString attributedStringWithAttachment:attachment]];
-		[baseString appendAttributedString:[[NSMutableAttributedString alloc] initWithString:[@" " stringByAppendingString:[self tableView:tableView titleForHeaderInSection:section]]]];
-
-		titleLabel.attributedText = baseString;
-		return titleLabel;
+	switch (section) {
+		case 0:
+			sectionImage = [[UIImage systemImageNamed:@"percent"] imageWithTintColor:[UIColor systemGreenColor]];
+			break;
+		case 1:
+			sectionImage = [[UIImage systemImageNamed:@"battery.100"] imageWithTintColor:[UIColor systemGreenColor]];
+			break;
+		case 2:
+			sectionImage = [[UIImage systemImageNamed:@"textformat"] imageWithTintColor:[UIColor systemGreenColor]];
+			break;
+		case 3:
+			sectionImage = [[UIImage systemImageNamed:@"square.fill.on.square.fill"] imageWithTintColor:[UIColor systemGreenColor]];
+			break;
+		case 4:
+			sectionImage = [[UIImage systemImageNamed:@"bolt.fill"] imageWithTintColor:[UIColor systemGreenColor]];
+			break;
+		case 5:
+			sectionImage = [[UIImage systemImageNamed:@"hand.point.up.fill"] imageWithTintColor:[UIColor systemGreenColor]];
+			break;
+		case 6:
+			sectionImage = [[UIImage systemImageNamed:@"link"] imageWithTintColor:[UIColor systemGreenColor]];
+			break;
+		default:
+			break;
 	}
-	return nil;
+	sectionImageView.image = sectionImage;
+	[sectionHeader addSubview:sectionImageView];
+
+	[NSLayoutConstraint activateConstraints:@[
+		[sectionImageView.leadingAnchor constraintEqualToAnchor:sectionHeader.leadingAnchor constant:8],
+		[sectionImageView.centerYAnchor constraintEqualToAnchor:sectionHeader.centerYAnchor],
+		[sectionImageView.widthAnchor constraintEqualToConstant:20],
+		[sectionImageView.heightAnchor constraintEqualToConstant:20],
+	]];
+	
+	return sectionHeader;
 }
 - (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section {
 	if ([self tableView:tableView titleForHeaderInSection:section] != nil) {
@@ -187,7 +239,7 @@
 		titleLabel.textAlignment = NSTextAlignmentCenter;
 		
 		NSString *primary = @"Ampere";
-		NSString *secondary = @"v1.0.6 © MTAC";
+		NSString *secondary = @"v1.0.8 © MTAC";
 
 		NSMutableAttributedString *final = [[NSMutableAttributedString alloc] initWithString:[NSString stringWithFormat:@"%@\n%@", primary, secondary]];
 		[final addAttribute:NSFontAttributeName value:[UIFont systemFontOfSize:18 weight:UIFontWeightSemibold] range:[final.string rangeOfString:primary]];
@@ -205,7 +257,7 @@
 	return 0;
 }
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
-	if (indexPath.section == 3) {
+	if (indexPath.section == 6) {
 		if (indexPath.row == 0) {
 			[[NSBundle bundleWithPath:@"/System/Library/Frameworks/SafariServices.framework"] load];
 			if ([SFSafariViewController class] != nil) {
@@ -229,6 +281,7 @@
 		}];
 		colorPickerAction.backgroundColor = [(AmpSwitchCell *)cell selectedColor]; // [UIColor tableCellGroupedBackgroundColor];
 		colorPickerAction.image = [UIImage systemImageNamed:@"paintbrush.pointed.fill"];
+
 		if ([[[NSUserDefaults standardUserDefaults] objectForKey:cell.specifier.properties[@"key"] inDomain:domain] boolValue]) {
 			[actions addObject:colorPickerAction];
 		}
@@ -250,7 +303,7 @@
 		} else if (indexPath.section == 2) {
 			if (indexPath.row == 0) {
 				UIContextualAction *reset = [UIContextualAction contextualActionWithStyle:UIContextualActionStyleNormal title:nil handler:^(UIContextualAction * _Nonnull action, __kindof UIView * _Nonnull sourceView, void (^ _Nonnull completionHandler)(BOOL)) {
-					[[NSUserDefaults standardUserDefaults] setObject:@8 forKey:@"fontSize" inDomain:domain];
+					[[NSUserDefaults standardUserDefaults] setObject:@10 forKey:@"fontSize" inDomain:domain];
 					[[NSUserDefaults standardUserDefaults] synchronize];
 					[self reloadSpecifier:cell.specifier];
 					completionHandler(YES);
@@ -291,6 +344,7 @@
 }
 - (void)setPreferenceValue:(id)value specifier:(PSSpecifier *)specifier {
 	[super setPreferenceValue:value specifier:specifier];
+	// [self reloadSpecifiers];
 	CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), (CFStringRef)@"com.mtac.amp/statusbar.changed", nil, nil, true);
 }
 - (void)respring {
@@ -342,14 +396,15 @@
 }
 - (void)setCellEnabled:(BOOL)cellEnabled {
 	[super setCellEnabled:cellEnabled];
-	self.control.hidden = !cellEnabled;
+	self.control.backgroundColor = cellEnabled ? [self selectedColor] : [UIColor secondaryLabelColor];
+	// self.control.hidden = !cellEnabled;
 }
 - (BOOL)cellEnabled {
 	return [[[NSUserDefaults standardUserDefaults] objectForKey:@"textStyle" inDomain:domain] integerValue] == 2;
 }
 - (void)refreshCellContentsWithSpecifier:(PSSpecifier *)specifier {
 	[super refreshCellContentsWithSpecifier:specifier];
-	self.control.backgroundColor = [self selectedColor];
+	self.control.backgroundColor = [self cellEnabled] ? [self selectedColor] : [UIColor secondaryLabelColor];
 }
 - (UIButton *)newControl {
 	UIButton *colorButton = [UIButton buttonWithType:UIButtonTypeCustom];
@@ -430,8 +485,11 @@
 	if (!self.control) {
 		return;
 	}
-	self.textLabel.text = [NSString stringWithFormat:self.specifier.name, (int)self.control.value];
-	[self setNeedsLayout];
+	NSString *labelText = [NSString stringWithFormat:@"%@ %d", self.specifier.name, (int)self.control.value];
+	if (labelText != nil) {
+		self.textLabel.text = labelText;
+		[self setNeedsLayout];
+	}
 }
 - (void)prepareForReuse {
 	[super prepareForReuse];
@@ -517,14 +575,17 @@
 - (UIMenu *)menu {
 	UIAction *defaultAction = [UIAction actionWithTitle:@"Default" image:[UIImage systemImageNamed:@"applelogo"] identifier:nil handler:^(__kindof UIAction *_Nonnull action) {
 		[[NSUserDefaults standardUserDefaults] setObject:@0 forKey:@"textStyle" inDomain:domain];
+		[self setValue:@0];
 		[self _updateControl];
 	}];
 	UIAction *transparentAction = [UIAction actionWithTitle:@"Transparent" image:[UIImage systemImageNamed:@"circle"] identifier:nil handler:^(__kindof UIAction *_Nonnull action) {
 		[[NSUserDefaults standardUserDefaults] setObject:@1 forKey:@"textStyle" inDomain:domain];
+		[self setValue:@1];
 		[self _updateControl];
 	}];
 	UIAction *customAction = [UIAction actionWithTitle:@"Custom" image:[UIImage systemImageNamed:@"paintpalette.fill"] identifier:nil handler:^(__kindof UIAction *_Nonnull action) {
 		[[NSUserDefaults standardUserDefaults] setObject:@2 forKey:@"textStyle" inDomain:domain];
+		[self setValue:@2];
 		[self _updateControl];
 	}];
 
@@ -550,11 +611,15 @@
 	UIMenu *menuActions = [UIMenu menuWithTitle:@"" children:@[customAction, transparentAction, defaultAction]];
 	return menuActions;
 }
+- (void)setValue:(id)arg0 {
+	[super setValue:arg0];
+}
 - (void)refreshCellContentsWithSpecifier:(PSSpecifier *)specifier {
 	[super refreshCellContentsWithSpecifier:specifier];
 	[self _updateControl];
 }
 - (void)_updateControl {
+	[[self _viewControllerForAncestor] reloadSpecifiers];
 	CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), (CFStringRef)@"com.mtac.amp/preferences.changed", nil, nil, true);
 	CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), (CFStringRef)@"com.mtac.amp/statusbar.changed", nil, nil, true);
 	NSString *title;
@@ -572,7 +637,6 @@
 	}
 	[(UIButton *)self.control setTitle:title forState:UIControlStateNormal];
 	[(UIButton *)self.control setMenu:[self menu]];
-	[[self _viewControllerForAncestor] reloadSpecifiers];
 }
 @end
 

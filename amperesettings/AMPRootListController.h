@@ -27,6 +27,7 @@ static NSString *domain = @"com.mtac.amp";
 @interface PSSpecifier : NSObject
 @property (nonatomic, retain) NSString *name;   
 - (NSDictionary *)properties;
+- (void)setProperty:(id)arg0 forKey:(id)arg1;
 @end
 
 @interface PSTableCell (Ampere)
@@ -71,6 +72,8 @@ static NSString *domain = @"com.mtac.amp";
 @property (nonatomic, strong) UIView *headerView;
 @property (nonatomic, strong) UIImageView *batteryView;
 @property (nonatomic, retain) UILabel *percentageLabel;
+@property (nonatomic, retain) UILabel *sectionSegmentLabel;
+@property (nonatomic, retain) UISegmentedControl *segmentedControl;
 @property (nonatomic, strong) AmpSwitch *enableSwitch;
 - (void)setEnableSwitchState;
 @end

@@ -60,10 +60,12 @@
 			<key>defaults</key>
 			<string>com.mtac.amp</string>
 			<key>label</key>
-			<string>Standard Color</string>
+			<string>Fill Color</string>
 			<key>subtitle</key>
-			<string>Override fill color in normal use. Swipe to set color</string>
+			<string>Override normal color. Swipe cell to set color</string>
 			<key>key</key>
+			<string></string>
+			<key>id</key>
 			<string>overrideColorStandard</string>
 			<key>height</key>
 			<string>85</string>
@@ -80,10 +82,12 @@
 			<key>defaults</key>
 			<string>com.mtac.amp</string>
 			<key>label</key>
-			<string>Charging Color</string>
+			<string>Fill Color</string>
 			<key>subtitle</key>
-			<string>Override fill color when charging. Swipe to set color</string>
+			<string>Override charging color. Swipe cell to set color</string>
 			<key>key</key>
+			<string>overrideColorCharging</string>
+			<key>id</key>
 			<string>overrideColorCharging</string>
 			<key>height</key>
 			<string>85</string>
@@ -100,11 +104,35 @@
 			<key>defaults</key>
 			<string>com.mtac.amp</string>
 			<key>label</key>
-			<string>Low Power Color</string>
+			<string>Fill Color</string>
 			<key>subtitle</key>
-			<string>Override fill colors in Low Power Mode. Swipe to set color</string>
+			<string>Override low power color. Swipe cell to set color</string>
 			<key>key</key>
 			<string>overrideColorLowPower</string>
+			<key>id</key>
+			<string>overrideColorLowPower</string>
+			<key>height</key>
+			<string>85</string>
+			<key>PostNotification</key>
+			<string>com.mtac.amp/preferences.changed</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>cellClass</key>
+			<string>AmpSwitchCell</string>
+			<key>default</key>
+			<false/>
+			<key>defaults</key>
+			<string>com.mtac.amp</string>
+			<key>label</key>
+			<string>Fill Color</string>
+			<key>subtitle</key>
+			<string>Override critical color. Swipe cell to set color</string>
+			<key>key</key>
+			<string>overrideColorCritical</string>
+			<key>id</key>
+			<string>overrideColorCritical</string>
 			<key>height</key>
 			<string>85</string>
 			<key>PostNotification</key>
@@ -125,8 +153,10 @@
 			<string>com.mtac.amp</string>
 			<key>key</key>
 			<string>fontSize</string>
+			<key>id</key>
+			<string>fontSize</string>
 			<key>label</key>
-			<string>Font Size: %i</string>
+			<string>Font Size:</string>
 			<key>subtitle</key>
 			<string>Swipe left to reset</string>
 			<key>max</key>
@@ -135,6 +165,36 @@
 			<real>4</real>
 			<key>height</key>
 			<string>65</string>
+			<key>PostNotification</key>
+			<string>com.mtac.amp/preferences.changed</string>
+		</dict>
+			<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>Sizing</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSegmentCell</string>
+			<key>default</key>
+			<integer>1</integer>
+			<key>defaults</key>
+			<string>com.mtac.amp</string>
+			<key>key</key>
+			<string>batterySizing</string>
+			<key>validValues</key>
+			<array>
+				<integer>0</integer>
+				<integer>1</integer>
+			</array>
+			<key>validTitles</key>
+			<array>
+				<string>Regular</string>
+				<string>Increased</string>
+			</array>
+			<key>alignment</key>
+			<string>4</string>
 			<key>PostNotification</key>
 			<string>com.mtac.amp/preferences.changed</string>
 		</dict>
@@ -158,6 +218,8 @@
 			<key>subtitle</key>
 			<string>Moves charging bolt next to battery percentage</string>
 			<key>key</key>
+			<string>showBolt</string>
+			<key>id</key>
 			<string>showBolt</string>
 			<key>height</key>
 			<string>85</string>
@@ -226,6 +288,6 @@
 		</dict>
 	</array>
 	<key>title</key>
-	<string>Ampere</string>
+	<string></string>
 </dict>
 </plist>
