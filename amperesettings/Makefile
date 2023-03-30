@@ -1,7 +1,5 @@
 TARGET := iphone:clang:latest:14.0
 SYSROOT = $(THEOS)/sdks/iPhoneOS14.2.sdk
-DEBUG = 1
-FINALPACKAGE = 0
 
 include $(THEOS)/makefiles/common.mk
 

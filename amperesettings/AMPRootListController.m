@@ -239,7 +239,7 @@
 		titleLabel.textAlignment = NSTextAlignmentCenter;
 		
 		NSString *primary = @"Ampere";
-		NSString *secondary = @"v1.0.8 © MTAC";
+		NSString *secondary = @"v1.0.9 © MTAC";
 
 		NSMutableAttributedString *final = [[NSMutableAttributedString alloc] initWithString:[NSString stringWithFormat:@"%@\n%@", primary, secondary]];
 		[final addAttribute:NSFontAttributeName value:[UIFont systemFontOfSize:18 weight:UIFontWeightSemibold] range:[final.string rangeOfString:primary]];
@@ -363,9 +363,10 @@
 	[self presentViewController:applyAlert animated:true completion:nil];
 	
 	dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.75 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^(void){
-		pid_t pid;
-		const char *args[] = {"killall", "backboardd", NULL};
-		posix_spawn(&pid, "/usr/bin/killall", NULL, NULL, (char *const *)args, NULL);
+		SBSRelaunchAction *respringAction = [NSClassFromString(@"SBSRelaunchAction") actionWithReason:@"RestartRenderServer" options:4 targetURL:[NSURL URLWithString:@"prefs:root=Bridge"]];
+		FBSSystemService *frontBoardService = [NSClassFromString(@"FBSSystemService") sharedService];
+		NSSet *actions = [NSSet setWithObject:respringAction];
+		[frontBoardService sendActions:actions withResult:nil];
 	});
 }
 - (void)reset {
@@ -557,7 +558,9 @@
 	if (self) {
 		self.accessoryView = self.control;
 		self.detailTextLabel.text = specifier.properties[@"subtitle"] ?: @"";
-		self.detailTextLabel.numberOfLines = 1;
+		self.detailTextLabel.numberOfLines = 2;
+
+		[self _updateControl];
 	}
 	return self;
 }
@@ -568,75 +571,50 @@
 	selectorButton.showsMenuAsPrimaryAction = YES;
 	selectorButton.contentHorizontalAlignment = UIControlContentHorizontalAlignmentRight;
 	[selectorButton setTitleColor:[UIColor secondaryLabelColor] forState:UIControlStateNormal];
-	
+
 	[self _updateControl];
 	return selectorButton;
 }
 - (UIMenu *)menu {
-	UIAction *defaultAction = [UIAction actionWithTitle:@"Default" image:[UIImage systemImageNamed:@"applelogo"] identifier:nil handler:^(__kindof UIAction *_Nonnull action) {
-		[[NSUserDefaults standardUserDefaults] setObject:@0 forKey:@"textStyle" inDomain:domain];
-		[self setValue:@0];
-		[self _updateControl];
-	}];
-	UIAction *transparentAction = [UIAction actionWithTitle:@"Transparent" image:[UIImage systemImageNamed:@"circle"] identifier:nil handler:^(__kindof UIAction *_Nonnull action) {
-		[[NSUserDefaults standardUserDefaults] setObject:@1 forKey:@"textStyle" inDomain:domain];
-		[self setValue:@1];
-		[self _updateControl];
-	}];
-	UIAction *customAction = [UIAction actionWithTitle:@"Custom" image:[UIImage systemImageNamed:@"paintpalette.fill"] identifier:nil handler:^(__kindof UIAction *_Nonnull action) {
-		[[NSUserDefaults standardUserDefaults] setObject:@2 forKey:@"textStyle" inDomain:domain];
-		[self setValue:@2];
-		[self _updateControl];
-	}];
-
-	switch ([[[NSUserDefaults standardUserDefaults] objectForKey:@"textStyle" inDomain:domain] integerValue]) {
-		case 0:
-			defaultAction.state = UIMenuElementStateOn;
-			transparentAction.state = UIMenuElementStateOff;
-			customAction.state = UIMenuElementStateOff;
-			break;
-		default:
-		case 1:
-			defaultAction.state = UIMenuElementStateOff;
-			transparentAction.state = UIMenuElementStateOn;
-			customAction.state = UIMenuElementStateOff;
-			break;
-		case 2:
-			defaultAction.state = UIMenuElementStateOff;
-			transparentAction.state = UIMenuElementStateOff;
-			customAction.state = UIMenuElementStateOn;
-			break;
+	NSMutableArray *menuItems = [NSMutableArray new];
+	NSArray *values = self.specifier.properties[@"values"];
+	NSArray *titles = self.specifier.properties[@"titles"];
+	NSArray *images = self.specifier.properties[@"images"];
+	// NSString *key = [self.specifier.properties objectForKey:@"key"];
+	for (NSInteger i = 0; i < values.count; i++) {
+		UIAction *action = [UIAction actionWithTitle:titles[i] image:[UIImage systemImageNamed:images[i]] identifier:nil handler:^(__kindof UIAction *_Nonnull action) {
+			NSInteger valueIndex = [[values objectAtIndex:i] integerValue];
+			[self setValue:[NSNumber numberWithInteger:valueIndex]];
+			[self _updateControl];
+		}];
+		if ([[self value] integerValue] == i) {
+			action.state = UIMenuElementStateOn;
+		} else {
+			action.state = UIMenuElementStateOff;
+		}
+		[menuItems addObject:action];
 	}
 
-	UIMenu *menuActions = [UIMenu menuWithTitle:@"" children:@[customAction, transparentAction, defaultAction]];
+	UIMenu *menuActions = [UIMenu menuWithTitle:@"" children:menuItems];
 	return menuActions;
-}
-- (void)setValue:(id)arg0 {
-	[super setValue:arg0];
 }
 - (void)refreshCellContentsWithSpecifier:(PSSpecifier *)specifier {
 	[super refreshCellContentsWithSpecifier:specifier];
 	[self _updateControl];
 }
 - (void)_updateControl {
-	[[self _viewControllerForAncestor] reloadSpecifiers];
+	NSArray *titles = self.specifier.properties[@"titles"];
+	NSInteger value = [[self value] integerValue];
 	CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), (CFStringRef)@"com.mtac.amp/preferences.changed", nil, nil, true);
 	CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), (CFStringRef)@"com.mtac.amp/statusbar.changed", nil, nil, true);
-	NSString *title;
-	switch ([[[NSUserDefaults standardUserDefaults] objectForKey:@"textStyle" inDomain:domain] integerValue]) {
-		case 0:
-			title = @"Default ›";
-			break;
-		default:
-		case 1:
-			title = @"Transparent ›";
-			break;
-		case 2:
-			title = @"Custom ›";
-			break;
-	}
-	[(UIButton *)self.control setTitle:title forState:UIControlStateNormal];
+	
 	[(UIButton *)self.control setMenu:[self menu]];
+	[(UIButton *)self.control setTitle:[titles[value] stringByAppendingString:@" ›"] forState:UIControlStateNormal];
+}
+- (void)setValue:(id)arg0 {
+	[super setValue:arg0];
+	NSString *key = [self.specifier.properties objectForKey:@"key"];
+	[[NSUserDefaults standardUserDefaults] setObject:arg0 forKey:key inDomain:domain];
 }
 @end
 

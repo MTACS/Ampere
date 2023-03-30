@@ -1,7 +1,7 @@
 #import <UIKit/UIKit.h>
 #import "spawn.h"
+#include <objc/runtime.h>
 
-#define ROOT_PATH_NS(path)([[NSFileManager defaultManager] fileExistsAtPath:path] ? path : [@"/var/jb" stringByAppendingPathComponent:path])
 #ifndef kCFCoreFoundationVersionNumber_iOS_16_0
 #define kCFCoreFoundationVersionNumber_iOS_16_0 1946.10
 #endif
@@ -106,17 +106,17 @@ static NSInteger batterySizing;
 }
 %new
 - (void)toggleLowPower:(id)sender {
-	if (%c(_PMLowPowerMode)) {
-		_PMLowPowerMode *lowPowerMode = [%c(_PMLowPowerMode) sharedInstance];
+	if (objc_getClass("_PMLowPowerMode")) {
+		_PMLowPowerMode *lowPowerMode = [objc_getClass("_PMLowPowerMode") sharedInstance];
 		BOOL active = [lowPowerMode getPowerMode] == 1;
 		[lowPowerMode setPowerMode:!active fromSource:@"SpringBoard"];
 	} else {
-		long long state = [[%c(_CDBatterySaver) batterySaver] getPowerMode];
+		long long state = [[objc_getClass("_CDBatterySaver") batterySaver] getPowerMode];
 		if (state == 0) {
-			[[%c(_CDBatterySaver) batterySaver] setPowerMode:1 error:nil];
+			[[objc_getClass("_CDBatterySaver") batterySaver] setPowerMode:1 error:nil];
 		} 
 		if (state == 1) {
-			[[%c(_CDBatterySaver) batterySaver] setPowerMode:0 error:nil];
+			[[objc_getClass("_CDBatterySaver") batterySaver] setPowerMode:0 error:nil];
 		}
 	}
 }
@@ -246,7 +246,7 @@ static NSInteger batterySizing;
 - (CALayer *)fillLayer {
 	CALayer *fill = %orig;
 	fill.maskedCorners = (self.chargePercent > 0.9) ? (kCALayerMaxXMaxYCorner | kCALayerMaxXMinYCorner | kCALayerMinXMaxYCorner | kCALayerMinXMinYCorner) : (kCALayerMinXMaxYCorner | kCALayerMinXMinYCorner); // Rounded corners always on leading edge, flat on trailing until above 92% to match stock radius
-	fill.bounds = CGRectMake(fill.bounds.origin.x, fill.bounds.origin.y - ((batterySizing == 1) ? 1 : 0), fill.bounds.size.width - 1, self.bounds.size.height + ((batterySizing == 1) ? 2 : 0));
+	fill.bounds = CGRectMake(fill.bounds.origin.x, fill.bounds.origin.y - ((batterySizing == 1) ? 1 : 0), fill.bounds.size.width, self.bounds.size.height + ((batterySizing == 1) ? 2 : 0));
 	return fill;
 }
 - (CGRect)_bodyRectForTraitCollection:(id)arg0 {

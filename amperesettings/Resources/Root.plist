@@ -23,6 +23,24 @@
 			<string>Swipe for more info</string>
 			<key>key</key>
 			<string>textStyle</string>
+			<key>values</key>
+			<array>
+				<integer>0</integer>
+				<integer>1</integer>
+				<integer>2</integer>
+			</array>
+			<key>titles</key>
+			<array>
+				<string>Default</string>
+				<string>Transparent</string>
+				<string>Custom</string>
+			</array>
+			<key>images</key>
+			<array>
+				<string>applelogo</string>
+				<string>shadow</string>
+				<string>paintpalette.fill</string>
+			</array>
 			<key>PostNotification</key>
 			<string>com.mtac.amp/preferences.changed</string>
 		</dict>
@@ -64,7 +82,7 @@
 			<key>subtitle</key>
 			<string>Override normal color. Swipe cell to set color</string>
 			<key>key</key>
-			<string></string>
+			<string>overrideColorStandard</string>
 			<key>id</key>
 			<string>overrideColorStandard</string>
 			<key>height</key>
@@ -175,26 +193,33 @@
 			<string>Sizing</string>
 		</dict>
 		<dict>
-			<key>cell</key>
-			<string>PSSegmentCell</string>
+			<key>cellClass</key>
+			<string>AmpSelectorCell</string>
 			<key>default</key>
-			<integer>1</integer>
+			<integer>0</integer>
 			<key>defaults</key>
 			<string>com.mtac.amp</string>
+			<key>label</key>
+			<string>Battery Sizing</string>
+			<key>subtitle</key>
+			<string>Change size of battery view</string>
 			<key>key</key>
 			<string>batterySizing</string>
-			<key>validValues</key>
+			<key>values</key>
 			<array>
 				<integer>0</integer>
 				<integer>1</integer>
 			</array>
-			<key>validTitles</key>
+			<key>titles</key>
 			<array>
-				<string>Regular</string>
+				<string>Standard</string>
 				<string>Increased</string>
 			</array>
-			<key>alignment</key>
-			<string>4</string>
+			<key>images</key>
+			<array>
+				<string>circlebadge.fill</string>
+				<string>circle.fill</string>
+			</array>
 			<key>PostNotification</key>
 			<string>com.mtac.amp/preferences.changed</string>
 		</dict>
