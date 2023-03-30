@@ -1,11 +1,10 @@
 TARGET := iphone:clang:latest:14.0
-SYSROOT = $(THEOS)/sdks/iPhoneOS14.2.sdk
 
 include $(THEOS)/makefiles/common.mk
 
 BUNDLE_NAME = AmpereSettings
 
-AmpereSettings_FILES = AMPRootListController.m AmpSwitch.m
+AmpereSettings_FILES = $(wildcard *.m)
 AmpereSettings_FRAMEWORKS = UIKit
 AmpereSettings_PRIVATE_FRAMEWORKS = Preferences
 AmpereSettings_INSTALL_PATH = /Library/PreferenceBundles
