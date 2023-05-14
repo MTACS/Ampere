@@ -186,43 +186,6 @@
 			<key>PostNotification</key>
 			<string>com.mtac.amp/preferences.changed</string>
 		</dict>
-			<dict>
-			<key>cell</key>
-			<string>PSGroupCell</string>
-			<key>label</key>
-			<string>Sizing</string>
-		</dict>
-		<dict>
-			<key>cellClass</key>
-			<string>AmpSelectorCell</string>
-			<key>default</key>
-			<integer>0</integer>
-			<key>defaults</key>
-			<string>com.mtac.amp</string>
-			<key>label</key>
-			<string>Battery Sizing</string>
-			<key>subtitle</key>
-			<string>Change size of battery view</string>
-			<key>key</key>
-			<string>batterySizing</string>
-			<key>values</key>
-			<array>
-				<integer>0</integer>
-				<integer>1</integer>
-			</array>
-			<key>titles</key>
-			<array>
-				<string>Standard</string>
-				<string>Increased</string>
-			</array>
-			<key>images</key>
-			<array>
-				<string>circlebadge.fill</string>
-				<string>circle.fill</string>
-			</array>
-			<key>PostNotification</key>
-			<string>com.mtac.amp/preferences.changed</string>
-		</dict>
 		<dict>
 			<key>cell</key>
 			<string>PSGroupCell</string>

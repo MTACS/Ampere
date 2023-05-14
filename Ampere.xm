@@ -1,93 +1,4 @@
-#import <UIKit/UIKit.h>
-#import "spawn.h"
-#include <objc/runtime.h>
-
-#ifndef kCFCoreFoundationVersionNumber_iOS_16_0
-#define kCFCoreFoundationVersionNumber_iOS_16_0 1946.10
-#endif
-#define kSLSystemVersioniOS16 kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_16_0
-
-extern NSString *const kCAFilterDestOut;
-
-static NSString *domain = @"com.mtac.amp";
-static NSString *preferencesNotification = @"com.mtac.amp/preferences.changed";
-static NSString *statusBarNotification = @"com.mtac.amp/statusbar.changed";
-static BOOL enabled;
-static BOOL showBolt;
-static BOOL useGesture;
-static BOOL overrideColorStandard;
-static BOOL overrideColorCharging;
-static BOOL overrideColorLowPower;
-static BOOL overrideColorCritical;
-static NSInteger textStyle;
-static NSInteger fontSize;
-static NSInteger batterySizing;
-
-@interface CALayer (Ampere)
-@property (nonatomic, retain) NSString *compositingFilter;
-@property (nonatomic, assign) BOOL allowsGroupOpacity;
-@property (nonatomic, assign) BOOL allowsGroupBlending;
-@end
-
-@interface _CDBatterySaver : NSObject
-+ (id)batterySaver;
-- (NSInteger)getPowerMode;
-- (BOOL)setPowerMode:(NSInteger)arg0 error:(id)arg1;
-@end
-
-@interface _PMLowPowerMode : NSObject
-+ (id)sharedInstance;
-- (NSInteger)getPowerMode;
-- (void)setPowerMode:(NSInteger)arg0 fromSource:(id)arg1;
-- (void)setPowerMode:(NSInteger)arg0 fromSource:(id)arg1 withCompletion:(id)arg2;
-@end
-
-@interface NSUserDefaults (Ampere)
-- (id)objectForKey:(NSString *)key inDomain:(NSString *)domain;
-- (void)setObject:(id)value forKey:(NSString *)key inDomain:(NSString *)domain;
-@end
-
-@interface _UIBatteryView : UIView
-@property (readonly, nonatomic, getter=isLowBattery) BOOL lowBattery;
-@property (retain, nonatomic) UIImageView *ampereImageView;
-@property (retain, nonatomic) UILabel *percentageLabel;
-@property (retain, nonatomic) CALayer *fillLayer;
-@property (retain, nonatomic) CALayer *pinLayer; 
-@property (copy, nonatomic) UIColor *pinColor;
-@property (nonatomic) CGFloat pinColorAlpha; 
-@property (nonatomic) CGFloat bodyColorAlpha;
-@property (nonatomic) CGFloat chargePercent;
-@property (nonatomic) BOOL saverModeActive;
-@property (nonatomic) NSInteger chargingState;
-@property (nonatomic) NSInteger iconSize;
-- (CGRect)_bodyRectForTraitCollection:(id)arg0;
-- (id)_batteryFillColor;
-- (id)_batteryTextColor;
-- (void)_updateBatteryFillColor;
-- (void)_updatePercentage;
-@end
-
-@interface UIStatusBarItem : NSObject
-@end
-
-@interface _UIStatusBarDisplayItem : NSObject
-@property (nonatomic, getter=isEnabled) BOOL enabled;
-@end
-
-@interface _UIStatusBarStringView : UIView
-- (void)setText:(id)arg0;
-@end
-
-@interface _UIStatusBarBatteryItem : UIStatusBarItem
-@property (retain, nonatomic) _UIStatusBarStringView *percentView;
-+ (id)staticIconDisplayIdentifier;
-+ (id)iconDisplayIdentifier;
-- (void)toggleLowPower:(id)sender;
-@end
-
-@interface _UIStatusBarDataBatteryEntry : NSObject
-@property (nonatomic) NSInteger state;
-@end
+#import "Ampere.h"
 
 %group Ampere
 %hook _UIStatusBarBatteryItem
@@ -144,7 +55,8 @@ static NSInteger batterySizing;
 	}
 	return %orig;
 }
-- (UIColor *)_batteryFillColor { // Return default or custom fill colors based on charging state
+%new
+- (UIColor *)ampereFillColor {
 	NSDictionary *standardColorDict = [[NSUserDefaults standardUserDefaults] objectForKey:@"overrideColorStandardDict" inDomain:domain];
 	NSDictionary *lowPowerColorDict = [[NSUserDefaults standardUserDefaults] objectForKey:@"overrideColorLowPowerDict" inDomain:domain];
 	NSDictionary *chargingColorDict = [[NSUserDefaults standardUserDefaults] objectForKey:@"overrideColorChargingDict" inDomain:domain];
@@ -163,7 +75,9 @@ static NSInteger batterySizing;
 	} else { // Low Power, overrides custom charging color
 		return lowPowerColor;
 	}
-	return %orig;
+}
+- (UIColor *)_batteryFillColor { // Return default or custom fill colors based on charging state
+	return [self ampereFillColor];
 }
 %end
 
@@ -172,12 +86,44 @@ static NSInteger batterySizing;
 	return @""; // Return empty string to keep automatic sizing
 }
 %end
+
+%hook BCUIRowView
+%property (nonatomic, strong) _UIBatteryView *ampereBatteryView;
+- (void)_configureBatteryViewIfNecessary {
+	%orig;
+	BCUIBatteryView *batteryView = MSHookIvar<BCUIBatteryView *>(self, "_batteryView");
+	
+	if (!(kSLSystemVersioniOS16)) {
+		if (!self.ampereBatteryView) self.ampereBatteryView = [[%c(_UIBatteryView) alloc] initWithSizeCategory:0];
+		self.ampereBatteryView.translatesAutoresizingMaskIntoConstraints = NO;
+		
+		[self addSubview:self.ampereBatteryView];
+		[NSLayoutConstraint activateConstraints:@[
+			[self.ampereBatteryView.widthAnchor constraintEqualToAnchor:batteryView.widthAnchor constant:-1],
+			[self.ampereBatteryView.heightAnchor constraintEqualToAnchor:batteryView.heightAnchor],
+			[self.ampereBatteryView.centerXAnchor constraintEqualToAnchor:batteryView.centerXAnchor],
+			[self.ampereBatteryView.centerYAnchor constraintEqualToAnchor:batteryView.centerYAnchor],
+		]];
+		batteryView.hidden = YES;
+
+		[self.ampereBatteryView setChargePercent:batteryView.chargePercent];
+		[self.ampereBatteryView setChargingState:batteryView.chargingState];
+	}
+}
+- (void)_configurePercentChargeLabelIfNecessary {
+	
+}
+%end
 %end
 
 %group XVI
 %hook _UIStaticBatteryView
 - (void)setShowsPercentage:(BOOL)arg0 {
 	%orig(YES);
+}
+- (void)_createFillLayer {
+	%orig;
+	[self setShowsPercentage:YES];
 }
 %end
 
@@ -202,7 +148,7 @@ static NSInteger batterySizing;
 }
 + (id)_pinBezierPathForSize:(struct CGSize )arg0 complex:(BOOL)arg1 {
 	UIBezierPath *path = %orig;
-	if (batterySizing == 1) {
+	if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad) {
 		[path applyTransform:CGAffineTransformMakeTranslation(1, 0)]; // Shift pin 1 px, done because setting line interspace width to fill body adds border
 	}
 	return path;
@@ -210,11 +156,12 @@ static NSInteger batterySizing;
 - (void)_updateFillLayer {
 	%orig;
 	[self.fillLayer setCornerRadius:([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPad) ? 4.0 : 3.5]; // Set fill corner radius whenever layer updates
+	[self.fillLayer setCornerCurve:@"circular"];
 }
 - (void)_updatePercentage {
 	%orig;
 	self.percentageLabel.font = [UIFont systemFontOfSize:((self.chargingState == 1 || self.chargePercent == 1.0) && fontSize > 10) ? 10 : fontSize weight:((batterySizing == 1) ? UIFontWeightHeavy : UIFontWeightBold)]; // Set custom percentage font size
-	if (showBolt && self.chargingState == 1) { // Show bolt next to percentage label text
+	if (showBolt && self.chargingState == 1 && self.chargePercent != 1.0) { // Show bolt next to percentage label text
 		NSTextAttachment *attachment = [[NSTextAttachment alloc] init];
 		[attachment setBounds:CGRectMake(0, 0, roundf(self.percentageLabel.font.capHeight * 0.6), roundf(self.percentageLabel.font.capHeight))];
 		[attachment setImage:[[UIImage systemImageNamed:@"bolt.fill"] imageWithTintColor:(self.saverModeActive) ? [UIColor blackColor] : [self _batteryTextColor]]];
@@ -235,6 +182,9 @@ static NSInteger batterySizing;
 - (CGFloat)_outsideCornerRadiusForTraitCollection:(id)arg0 {
 	return ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPad) ? 4.0 : 3.5; // Slightly adjust corner radius for expanded height
 }
++ (CGFloat)_lineWidthAndInterspaceForIconSize:(NSInteger)arg0 {
+	return 0;
+}
 - (CGFloat)bodyColorAlpha {
 	return 1.0; // Overrides default fill color alpha (normally 0.4)
 }
@@ -245,13 +195,13 @@ static NSInteger batterySizing;
 }
 - (CALayer *)fillLayer {
 	CALayer *fill = %orig;
-	fill.maskedCorners = (self.chargePercent > 0.9) ? (kCALayerMaxXMaxYCorner | kCALayerMaxXMinYCorner | kCALayerMinXMaxYCorner | kCALayerMinXMinYCorner) : (kCALayerMinXMaxYCorner | kCALayerMinXMinYCorner); // Rounded corners always on leading edge, flat on trailing until above 92% to match stock radius
-	fill.bounds = CGRectMake(fill.bounds.origin.x, fill.bounds.origin.y - ((batterySizing == 1) ? 1 : 0), fill.bounds.size.width, self.bounds.size.height + ((batterySizing == 1) ? 2 : 0));
+	fill.maskedCorners = (self.chargePercent > 0.82) ? (kCALayerMaxXMaxYCorner | kCALayerMaxXMinYCorner | kCALayerMinXMaxYCorner | kCALayerMinXMinYCorner) : (kCALayerMinXMaxYCorner | kCALayerMinXMinYCorner); // Rounded corners always on leading edge, flat on trailing until above 92% to match stock radius
+	fill.bounds = CGRectMake(fill.bounds.origin.x - 1, fill.bounds.origin.y, fill.bounds.size.width, self.bounds.size.height);
 	return fill;
 }
 - (CGRect)_bodyRectForTraitCollection:(id)arg0 {
 	CGRect bodyRect = %orig;
-	return CGRectMake(bodyRect.origin.x, bodyRect.origin.y - ((batterySizing == 1) ? 1 : 0), bodyRect.size.width - 1, bodyRect.size.height + ((batterySizing == 1) ? 2 : 0)); // Resize view height to better replicate iOS 16
+	return CGRectMake(bodyRect.origin.x, bodyRect.origin.y, bodyRect.size.width - 1, bodyRect.size.height); // Resize view height to better replicate iOS 16
 }
 - (CGFloat)_lineWidthAndInterspaceForTraitCollection:(id)arg0 {
 	return 0; // Disable space between fill layer and border of body layer
@@ -276,6 +226,8 @@ static void reloadStatusBar(CFNotificationCenterRef center, void *observer, CFSt
 }
 
 static void loadPreferences(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo) {
+	RLog(@"AMPERE DEBUG: Loading preferences");
+	
 	NSNumber *enabledValue = (NSNumber *)[[NSUserDefaults standardUserDefaults] objectForKey:@"enabled" inDomain:domain];
 	enabled = (enabledValue) ? [enabledValue boolValue] : NO;
 	NSNumber *showBoltValue = (NSNumber *)[[NSUserDefaults standardUserDefaults] objectForKey:@"showBolt" inDomain: domain];
@@ -295,8 +247,6 @@ static void loadPreferences(CFNotificationCenterRef center, void *observer, CFSt
 	textStyle = (textStyleValue) ? [textStyleValue integerValue] : 0;
 	NSNumber *fontSizeValue = (NSNumber *)[[NSUserDefaults standardUserDefaults] objectForKey:@"fontSize" inDomain:domain];
 	fontSize = (fontSizeValue) ? [fontSizeValue integerValue] : 8;
-	NSNumber *batterySizingValue = (NSNumber *)[[NSUserDefaults standardUserDefaults] objectForKey:@"batterySizing" inDomain:domain];
-	batterySizing = (batterySizingValue) ? [batterySizingValue integerValue] : 1;
 }
 
 %ctor {
