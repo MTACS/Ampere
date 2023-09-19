@@ -18,7 +18,7 @@
 			<key>defaults</key>
 			<string>com.mtac.amp</string>
 			<key>label</key>
-			<string>Percentage Color</string>
+			<string>Percent Color</string>
 			<key>subtitle</key>
 			<string>Swipe for more info</string>
 			<key>key</key>
@@ -43,6 +43,11 @@
 			</array>
 			<key>PostNotification</key>
 			<string>com.mtac.amp/preferences.changed</string>
+			<key>iconImageSystem</key>
+			<dict>
+				<key>name</key>
+				<string>percent</string>
+			</dict>
 		</dict>
 		<dict>
 			<key>cellClass</key>
@@ -61,6 +66,11 @@
 			<string>textColor</string>
 			<key>PostNotification</key>
 			<string>com.mtac.amp/preferences.changed</string>
+			<key>iconImageSystem</key>
+			<dict>
+				<key>name</key>
+				<string>paintbrush.pointed.fill</string>
+			</dict>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -89,6 +99,11 @@
 			<string>85</string>
 			<key>PostNotification</key>
 			<string>com.mtac.amp/preferences.changed</string>
+			<key>iconImageSystem</key>
+			<dict>
+				<key>name</key>
+				<string>battery.100</string>
+			</dict>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -111,6 +126,11 @@
 			<string>85</string>
 			<key>PostNotification</key>
 			<string>com.mtac.amp/preferences.changed</string>
+			<key>iconImageSystem</key>
+			<dict>
+				<key>name</key>
+				<string>battery.100</string>
+			</dict>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -133,6 +153,11 @@
 			<string>85</string>
 			<key>PostNotification</key>
 			<string>com.mtac.amp/preferences.changed</string>
+			<key>iconImageSystem</key>
+			<dict>
+				<key>name</key>
+				<string>battery.100</string>
+			</dict>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -155,6 +180,11 @@
 			<string>85</string>
 			<key>PostNotification</key>
 			<string>com.mtac.amp/preferences.changed</string>
+			<key>iconImageSystem</key>
+			<dict>
+				<key>name</key>
+				<string>battery.100</string>
+			</dict>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -185,43 +215,11 @@
 			<string>65</string>
 			<key>PostNotification</key>
 			<string>com.mtac.amp/preferences.changed</string>
-		</dict>
+			<key>iconImageSystem</key>
 			<dict>
-			<key>cell</key>
-			<string>PSGroupCell</string>
-			<key>label</key>
-			<string>Sizing</string>
-		</dict>
-		<dict>
-			<key>cellClass</key>
-			<string>AmpSelectorCell</string>
-			<key>default</key>
-			<integer>0</integer>
-			<key>defaults</key>
-			<string>com.mtac.amp</string>
-			<key>label</key>
-			<string>Battery Sizing</string>
-			<key>subtitle</key>
-			<string>Change size of battery view</string>
-			<key>key</key>
-			<string>batterySizing</string>
-			<key>values</key>
-			<array>
-				<integer>0</integer>
-				<integer>1</integer>
-			</array>
-			<key>titles</key>
-			<array>
-				<string>Standard</string>
-				<string>Increased</string>
-			</array>
-			<key>images</key>
-			<array>
-				<string>circlebadge.fill</string>
-				<string>circle.fill</string>
-			</array>
-			<key>PostNotification</key>
-			<string>com.mtac.amp/preferences.changed</string>
+				<key>name</key>
+				<string>textformat</string>
+			</dict>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -250,6 +248,11 @@
 			<string>85</string>
 			<key>PostNotification</key>
 			<string>com.mtac.amp/preferences.changed</string>
+			<key>iconImageSystem</key>
+			<dict>
+				<key>name</key>
+				<string>bolt.fill</string>
+			</dict>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -269,7 +272,7 @@
 			<key>label</key>
 			<string>Use Low Power Gesture</string>
 			<key>subtitle</key>
-			<string>Tap to toggle Low Power mode. SpringBoard only</string>
+			<string>Tap battery icon to toggle Low Power mode</string>
 			<key>key</key>
 			<string>useGesture</string>
 			<key>height</key>
@@ -278,6 +281,44 @@
 			<string>lowPower</string>
 			<key>PostNotification</key>
 			<string>com.mtac.amp/preferences.changed</string>
+			<key>iconImageSystem</key>
+			<dict>
+				<key>name</key>
+				<string>hand.point.up.fill</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSGroupCell</string>
+			<key>label</key>
+			<string>Control Center</string>
+		</dict>
+		<dict>
+			<key>cell</key>
+			<string>PSSwitchCell</string>
+			<key>cellClass</key>
+			<string>AmpSwitchCell</string>
+			<key>default</key>
+			<true/>
+			<key>defaults</key>
+			<string>com.mtac.amp</string>
+			<key>label</key>
+			<string>Enable Battery Info</string>
+			<key>subtitle</key>
+			<string>Force Touch on Low Power Mode module in Control Center to view</string>
+			<key>key</key>
+			<string>useStatsModule</string>
+			<key>height</key>
+			<string>85</string>
+			<key>id</key>
+			<string>statsModule</string>
+			<key>PostNotification</key>
+			<string>com.mtac.amp/preferences.changed</string>
+			<key>iconImageSystem</key>
+			<dict>
+				<key>name</key>
+				<string>switch.2</string>
+			</dict>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -298,6 +339,11 @@
 			<string>https://github.com/MTACS/Ampere</string>
 			<key>height</key>
 			<string>70</string>
+			<key>iconImageSystem</key>
+			<dict>
+				<key>name</key>
+				<string>link</string>
+			</dict>
 		</dict>
 		<dict>
 			<key>cell</key>
@@ -313,6 +359,6 @@
 		</dict>
 	</array>
 	<key>title</key>
-	<string></string>
+	<string>Ampere</string>
 </dict>
 </plist>

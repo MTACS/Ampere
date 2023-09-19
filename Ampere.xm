@@ -1,92 +1,237 @@
-#import <UIKit/UIKit.h>
-#import "spawn.h"
-#include <objc/runtime.h>
+#import "Ampere.h"
 
-#ifndef kCFCoreFoundationVersionNumber_iOS_16_0
-#define kCFCoreFoundationVersionNumber_iOS_16_0 1946.10
-#endif
-#define kSLSystemVersioniOS16 kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_16_0
+NSString *batteryCharging() {
+	UIDevice *device = [UIDevice currentDevice];
+	device.batteryMonitoringEnabled = YES;
+	switch ([device batteryState]) {
+		case UIDeviceBatteryStateCharging:
+			return @"Yes";
+		case UIDeviceBatteryStateFull:
+		case UIDeviceBatteryStateUnplugged:
+		case UIDeviceBatteryStateUnknown:
+		default:
+			return @"No";
+	}
+}
 
-extern NSString *const kCAFilterDestOut;
+NSString *celsiusTemperature() {
+	io_service_t powerSource = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOPMPowerSource"));
+	if (powerSource) {
+		CFMutableDictionaryRef batteryDictionaryRef = NULL;
+		if (IORegistryEntryCreateCFProperties(powerSource, &batteryDictionaryRef, 0, 0) == KERN_SUCCESS) {
+			float temperature = -1;
+			CFNumberRef temperatureRef = (CFNumberRef)IORegistryEntryCreateCFProperty(powerSource, CFSTR("Temperature"), kCFAllocatorDefault, 0);
+			CFNumberGetValue(temperatureRef, kCFNumberFloatType, &temperature);
+			CFRelease(temperatureRef);
+			return [NSString stringWithFormat:@"%.1f°C", temperature / 100];
+		}
+	}
+	return @"--°C";
+}
 
-static NSString *domain = @"com.mtac.amp";
-static NSString *preferencesNotification = @"com.mtac.amp/preferences.changed";
-static NSString *statusBarNotification = @"com.mtac.amp/statusbar.changed";
-static BOOL enabled;
-static BOOL showBolt;
-static BOOL useGesture;
-static BOOL overrideColorStandard;
-static BOOL overrideColorCharging;
-static BOOL overrideColorLowPower;
-static BOOL overrideColorCritical;
-static NSInteger textStyle;
-static NSInteger fontSize;
-static NSInteger batterySizing;
+NSString *fahrenheitTemperature() {
+	NSString *celsiusMethod = celsiusTemperature();
+	NSString *celsius = [celsiusMethod substringToIndex:celsiusMethod.length - 2];
+	if ([celsius isEqualToString:@"--"])
+		return [celsius stringByAppendingString:@"°F"];
+	return [NSString stringWithFormat:@"%.1f°F", [celsius floatValue] * 1.8 + 32.0];
+}
 
-@interface CALayer (Ampere)
-@property (nonatomic, retain) NSString *compositingFilter;
-@property (nonatomic, assign) BOOL allowsGroupOpacity;
-@property (nonatomic, assign) BOOL allowsGroupBlending;
-@end
+NSString *cycles() {
+	io_service_t powerSource = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOPMPowerSource"));
+	if (powerSource) {
+		CFMutableDictionaryRef batteryDictionaryRef = NULL;
+		if (IORegistryEntryCreateCFProperties(powerSource, &batteryDictionaryRef, 0, 0) == KERN_SUCCESS) {
+			int cycles = -1;
+			CFNumberRef cyclesRef = (CFNumberRef)IORegistryEntryCreateCFProperty(powerSource, CFSTR("CycleCount"), kCFAllocatorDefault, 0);
+			CFNumberGetValue(cyclesRef, kCFNumberIntType, &cycles);
+			CFRelease(cyclesRef);
+			return [NSString stringWithFormat:@"%d", cycles];
+		}
+	}
+	return @"-";
+}
 
-@interface _CDBatterySaver : NSObject
-+ (id)batterySaver;
-- (NSInteger)getPowerMode;
-- (BOOL)setPowerMode:(NSInteger)arg0 error:(id)arg1;
-@end
+int maxCapacity() {
+	io_service_t powerSource = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOPMPowerSource"));
+	if (powerSource) {
+		CFMutableDictionaryRef batteryDictionaryRef = NULL;
+		if (IORegistryEntryCreateCFProperties(powerSource, &batteryDictionaryRef, 0, 0) == KERN_SUCCESS) {
+			int maxCapacity = -1;
+			CFNumberRef maxCapRef = (CFNumberRef)IORegistryEntryCreateCFProperty(powerSource, CFSTR("AppleRawMaxCapacity"), kCFAllocatorDefault, 0);
+			CFNumberGetValue(maxCapRef, kCFNumberIntType, &maxCapacity);
+			CFRelease(maxCapRef);
+			return maxCapacity;
+		}
+	}
+	return -1;
+}
 
-@interface _PMLowPowerMode : NSObject
-+ (id)sharedInstance;
-- (NSInteger)getPowerMode;
-- (void)setPowerMode:(NSInteger)arg0 fromSource:(id)arg1;
-- (void)setPowerMode:(NSInteger)arg0 fromSource:(id)arg1 withCompletion:(id)arg2;
-@end
+int designCapacity() {
+	io_service_t powerSource = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOPMPowerSource"));
+	if (powerSource) {
+		CFMutableDictionaryRef batteryDictionaryRef = NULL;
+		if (IORegistryEntryCreateCFProperties(powerSource, &batteryDictionaryRef, 0, 0) == KERN_SUCCESS) {
+			int designCapacity = -1;
+			CFNumberRef designCapRef = (CFNumberRef)IORegistryEntryCreateCFProperty(powerSource, CFSTR("DesignCapacity"), kCFAllocatorDefault, 0);
+			CFNumberGetValue(designCapRef, kCFNumberIntType, &designCapacity);
+			CFRelease(designCapRef);
+			return designCapacity;
+		}
+	}
+	return -1;
+}
 
-@interface NSUserDefaults (Ampere)
-- (id)objectForKey:(NSString *)key inDomain:(NSString *)domain;
-- (void)setObject:(id)value forKey:(NSString *)key inDomain:(NSString *)domain;
-@end
+NSString *amperage() {
+	io_service_t powerSource = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOPMPowerSource"));
+	if (powerSource) {
+		CFMutableDictionaryRef batteryDictionaryRef = NULL;
+		if (IORegistryEntryCreateCFProperties(powerSource, &batteryDictionaryRef, 0, 0) == KERN_SUCCESS) {
+			int amperage = -1;
+			CFNumberRef amperageRef = (CFNumberRef)IORegistryEntryCreateCFProperty(powerSource, CFSTR("InstantAmperage"), kCFAllocatorDefault, 0);
+			CFNumberGetValue(amperageRef, kCFNumberIntType, &amperage);
+			CFRelease(amperageRef);
+			return [NSString stringWithFormat:@"%d mA", amperage];
+		}
+	}
+	return @"- mA";
+}
 
-@interface _UIBatteryView : UIView
-@property (readonly, nonatomic, getter=isLowBattery) BOOL lowBattery;
-@property (retain, nonatomic) UIImageView *ampereImageView;
-@property (retain, nonatomic) UILabel *percentageLabel;
-@property (retain, nonatomic) CALayer *fillLayer;
-@property (retain, nonatomic) CALayer *pinLayer; 
-@property (copy, nonatomic) UIColor *pinColor;
-@property (nonatomic) CGFloat pinColorAlpha; 
-@property (nonatomic) CGFloat bodyColorAlpha;
-@property (nonatomic) CGFloat chargePercent;
-@property (nonatomic) BOOL saverModeActive;
-@property (nonatomic) NSInteger chargingState;
-@property (nonatomic) NSInteger iconSize;
-- (CGRect)_bodyRectForTraitCollection:(id)arg0;
-- (id)_batteryFillColor;
-- (id)_batteryTextColor;
-- (void)_updateBatteryFillColor;
-- (void)_updatePercentage;
-@end
+NSString *voltage() {
+	io_service_t powerSource = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOPMPowerSource"));
+	if (powerSource) {
+		CFMutableDictionaryRef batteryDictionaryRef = NULL;
+		if (IORegistryEntryCreateCFProperties(powerSource, &batteryDictionaryRef, 0, 0) == KERN_SUCCESS) {
+			float voltage = -1;
+			CFNumberRef voltageRef = (CFNumberRef)IORegistryEntryCreateCFProperty(powerSource, CFSTR("Voltage"), kCFAllocatorDefault, 0);
+			CFNumberGetValue(voltageRef, kCFNumberFloatType, &voltage);
+			CFRelease(voltageRef);
+			return [NSString stringWithFormat:@"%.1f V", voltage / 1000];
+		}
+	}
+	return @"- V";
+}
 
-@interface UIStatusBarItem : NSObject
-@end
+@implementation AMPStatsController
+- (id)init {
+	self = [super init];
+	if (self) {
+		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(reloadData) name:@"AMPReloadStatsController" object:nil];
+		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(reloadData) name:@"SBUIACStatusChangedNotification" object:nil];
+	}
+	return self;
+}
+- (void)viewDidLoad {
+    [super viewDidLoad];
 
-@interface _UIStatusBarDisplayItem : NSObject
-@property (nonatomic, getter=isEnabled) BOOL enabled;
-@end
+    self.tableView = [[UITableView alloc] initWithFrame:CGRectZero style:UITableViewStyleInsetGrouped];
+    self.tableView.translatesAutoresizingMaskIntoConstraints = NO;
+	self.tableView.delegate = self;
+    self.tableView.dataSource = self;
+	self.tableView.separatorColor = [UIColor clearColor];
+	self.tableView.backgroundColor = [UIColor clearColor];
+	self.tableView.userInteractionEnabled = NO;
+    [self.view addSubview:self.tableView];
 
-@interface _UIStatusBarStringView : UIView
-- (void)setText:(id)arg0;
-@end
+	[NSLayoutConstraint activateConstraints:@[
+		[self.tableView.topAnchor constraintEqualToAnchor:self.view.topAnchor],
+		[self.tableView.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor],
+		[self.tableView.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
+		[self.tableView.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
+	]];
+}
+- (double)tableView:(id)arg1 heightForRowAtIndexPath:(id)arg2 {
+	return 44.0;
+}
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+	return 1;
+}
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+	return 8;
+}
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+	static NSString *identifier = @"Cell";
+	UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:identifier];
+	if (!cell) {
+		cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:identifier];
+	}
+	cell.backgroundColor = [UIColor clearColor];
+	UIListContentConfiguration *content = [cell defaultContentConfiguration];
+	[content setText:[self titleForRow:indexPath.row]];
+	[content.textProperties setColor:[UIColor whiteColor]];
+	[content setSecondaryText:[self detailForRow:indexPath.row]];
+	[content.secondaryTextProperties setColor:[UIColor colorWithWhite:1.0 alpha:0.75]];
+	[content.secondaryTextProperties setFont:[UIFont systemFontOfSize:18]];
+	[content setPrefersSideBySideTextAndSecondaryText:YES];
+	[cell setContentConfiguration:content];
 
-@interface _UIStatusBarBatteryItem : UIStatusBarItem
-@property (retain, nonatomic) _UIStatusBarStringView *percentView;
-+ (id)staticIconDisplayIdentifier;
-+ (id)iconDisplayIdentifier;
-- (void)toggleLowPower:(id)sender;
-@end
-
-@interface _UIStatusBarDataBatteryEntry : NSObject
-@property (nonatomic) NSInteger state;
+	return cell;
+}
+- (NSString *)titleForRow:(NSInteger)row {
+	NSString *title;
+	switch (row) {
+		case 0:
+			title = @"Charging";
+			break;
+		case 1:
+			title = @"Cycles";
+			break;
+		case 2:
+			title = @"Temperature";
+			break;
+		case 3:
+			title = @"Health";
+			break;
+		case 4:
+			title = @"Max Capacity";
+			break;
+		case 5:
+			title = @"Design Capacity";
+			break;
+		case 6:
+			title = @"Amperage";
+			break;
+		case 7:
+			title = @"Voltage";
+	}
+	return title;
+}
+- (NSString *)detailForRow:(NSInteger)row {
+	NSString *detail;
+	switch (row) {
+		case 0:
+			detail = batteryCharging();
+			break;
+		case 1:
+			detail = cycles();
+			break;
+		case 2:
+			detail = [NSString stringWithFormat:@"%@/%@", celsiusTemperature(), fahrenheitTemperature()];
+			break;
+		case 3:
+			detail = [NSString stringWithFormat:@"%0.f%%", (CGFloat)maxCapacity() / (CGFloat)designCapacity() * 100];
+			break;
+		case 4:
+			detail = [NSString stringWithFormat:@"%d mAh", maxCapacity()];
+			break;
+		case 5:
+			detail = [NSString stringWithFormat:@"%d mAh", designCapacity()];
+			break;
+		case 6:
+			detail = amperage();
+			break;
+		case 7:
+			detail = voltage();
+			break;
+	}
+	return detail;
+}
+- (void)reloadData {
+	[self.tableView reloadData];
+}
+- (BOOL)_canShowWhileLocked {
+	return YES;
+}
 @end
 
 %group Ampere
@@ -144,7 +289,8 @@ static NSInteger batterySizing;
 	}
 	return %orig;
 }
-- (UIColor *)_batteryFillColor { // Return default or custom fill colors based on charging state
+%new
+- (UIColor *)ampereFillColor {
 	NSDictionary *standardColorDict = [[NSUserDefaults standardUserDefaults] objectForKey:@"overrideColorStandardDict" inDomain:domain];
 	NSDictionary *lowPowerColorDict = [[NSUserDefaults standardUserDefaults] objectForKey:@"overrideColorLowPowerDict" inDomain:domain];
 	NSDictionary *chargingColorDict = [[NSUserDefaults standardUserDefaults] objectForKey:@"overrideColorChargingDict" inDomain:domain];
@@ -163,7 +309,9 @@ static NSInteger batterySizing;
 	} else { // Low Power, overrides custom charging color
 		return lowPowerColor;
 	}
-	return %orig;
+}
+- (UIColor *)_batteryFillColor { // Return default or custom fill colors based on charging state
+	return [self ampereFillColor];
 }
 %end
 
@@ -172,12 +320,44 @@ static NSInteger batterySizing;
 	return @""; // Return empty string to keep automatic sizing
 }
 %end
+
+%hook BCUIRowView
+%property (nonatomic, strong) _UIBatteryView *ampereBatteryView;
+- (void)_configureBatteryViewIfNecessary {
+	%orig;
+	BCUIBatteryView *batteryView = MSHookIvar<BCUIBatteryView *>(self, "_batteryView");
+	
+	if (!(kSLSystemVersioniOS16)) {
+		if (!self.ampereBatteryView) self.ampereBatteryView = [[%c(_UIBatteryView) alloc] initWithSizeCategory:0];
+		self.ampereBatteryView.translatesAutoresizingMaskIntoConstraints = NO;
+		
+		[self addSubview:self.ampereBatteryView];
+		[NSLayoutConstraint activateConstraints:@[
+			[self.ampereBatteryView.widthAnchor constraintEqualToAnchor:batteryView.widthAnchor constant:-1],
+			[self.ampereBatteryView.heightAnchor constraintEqualToAnchor:batteryView.heightAnchor],
+			[self.ampereBatteryView.centerXAnchor constraintEqualToAnchor:batteryView.centerXAnchor],
+			[self.ampereBatteryView.centerYAnchor constraintEqualToAnchor:batteryView.centerYAnchor],
+		]];
+		batteryView.hidden = YES;
+
+		[self.ampereBatteryView setChargePercent:batteryView.chargePercent];
+		[self.ampereBatteryView setChargingState:batteryView.chargingState];
+	}
+}
+- (void)_configurePercentChargeLabelIfNecessary {
+	
+}
+%end
 %end
 
 %group XVI
 %hook _UIStaticBatteryView
 - (void)setShowsPercentage:(BOOL)arg0 {
 	%orig(YES);
+}
+- (void)_createFillLayer {
+	%orig;
+	[self setShowsPercentage:YES];
 }
 %end
 
@@ -202,7 +382,7 @@ static NSInteger batterySizing;
 }
 + (id)_pinBezierPathForSize:(struct CGSize )arg0 complex:(BOOL)arg1 {
 	UIBezierPath *path = %orig;
-	if (batterySizing == 1) {
+	if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad) {
 		[path applyTransform:CGAffineTransformMakeTranslation(1, 0)]; // Shift pin 1 px, done because setting line interspace width to fill body adds border
 	}
 	return path;
@@ -210,11 +390,12 @@ static NSInteger batterySizing;
 - (void)_updateFillLayer {
 	%orig;
 	[self.fillLayer setCornerRadius:([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPad) ? 4.0 : 3.5]; // Set fill corner radius whenever layer updates
+	[self.fillLayer setCornerCurve:@"circular"];
 }
 - (void)_updatePercentage {
 	%orig;
 	self.percentageLabel.font = [UIFont systemFontOfSize:((self.chargingState == 1 || self.chargePercent == 1.0) && fontSize > 10) ? 10 : fontSize weight:((batterySizing == 1) ? UIFontWeightHeavy : UIFontWeightBold)]; // Set custom percentage font size
-	if (showBolt && self.chargingState == 1) { // Show bolt next to percentage label text
+	if (showBolt && self.chargingState == 1 && self.chargePercent != 1.0) { // Show bolt next to percentage label text
 		NSTextAttachment *attachment = [[NSTextAttachment alloc] init];
 		[attachment setBounds:CGRectMake(0, 0, roundf(self.percentageLabel.font.capHeight * 0.6), roundf(self.percentageLabel.font.capHeight))];
 		[attachment setImage:[[UIImage systemImageNamed:@"bolt.fill"] imageWithTintColor:(self.saverModeActive) ? [UIColor blackColor] : [self _batteryTextColor]]];
@@ -235,6 +416,9 @@ static NSInteger batterySizing;
 - (CGFloat)_outsideCornerRadiusForTraitCollection:(id)arg0 {
 	return ([[UIDevice currentDevice] userInterfaceIdiom] == UIUserInterfaceIdiomPad) ? 4.0 : 3.5; // Slightly adjust corner radius for expanded height
 }
++ (CGFloat)_lineWidthAndInterspaceForIconSize:(NSInteger)arg0 {
+	return 0;
+}
 - (CGFloat)bodyColorAlpha {
 	return 1.0; // Overrides default fill color alpha (normally 0.4)
 }
@@ -245,13 +429,13 @@ static NSInteger batterySizing;
 }
 - (CALayer *)fillLayer {
 	CALayer *fill = %orig;
-	fill.maskedCorners = (self.chargePercent > 0.9) ? (kCALayerMaxXMaxYCorner | kCALayerMaxXMinYCorner | kCALayerMinXMaxYCorner | kCALayerMinXMinYCorner) : (kCALayerMinXMaxYCorner | kCALayerMinXMinYCorner); // Rounded corners always on leading edge, flat on trailing until above 92% to match stock radius
-	fill.bounds = CGRectMake(fill.bounds.origin.x, fill.bounds.origin.y - ((batterySizing == 1) ? 1 : 0), fill.bounds.size.width, self.bounds.size.height + ((batterySizing == 1) ? 2 : 0));
+	fill.maskedCorners = (self.chargePercent > 0.82) ? (kCALayerMaxXMaxYCorner | kCALayerMaxXMinYCorner | kCALayerMinXMaxYCorner | kCALayerMinXMinYCorner) : (kCALayerMinXMaxYCorner | kCALayerMinXMinYCorner); // Rounded corners always on leading edge, flat on trailing until above 92% to match stock radius
+	fill.bounds = CGRectMake(fill.bounds.origin.x - 1, fill.bounds.origin.y, fill.bounds.size.width, self.bounds.size.height);
 	return fill;
 }
 - (CGRect)_bodyRectForTraitCollection:(id)arg0 {
 	CGRect bodyRect = %orig;
-	return CGRectMake(bodyRect.origin.x, bodyRect.origin.y - ((batterySizing == 1) ? 1 : 0), bodyRect.size.width - 1, bodyRect.size.height + ((batterySizing == 1) ? 2 : 0)); // Resize view height to better replicate iOS 16
+	return CGRectMake(bodyRect.origin.x, bodyRect.origin.y, bodyRect.size.width - 1, bodyRect.size.height); // Resize view height to better replicate iOS 16
 }
 - (CGFloat)_lineWidthAndInterspaceForTraitCollection:(id)arg0 {
 	return 0; // Disable space between fill layer and border of body layer
@@ -267,6 +451,108 @@ static NSInteger batterySizing;
 %hook _UIStatusBarBatteryItem
 + (id)staticIconDisplayIdentifier {
 	return [self iconDisplayIdentifier]; // Override static identifier, used in iPhone Control Center & everywhere on iPad
+}
+%end
+%end
+
+%group BatteryInfo
+%hook CCUIToggleViewController
+- (void)viewDidLoad {
+	%orig;
+	if ([self.module isKindOfClass:%c(CCUILowPowerModule)]) {
+		AMPStatsController *statsController = [[AMPStatsController alloc] init];
+		if (![self.view.subviews containsObject:statsController.view]) {
+			statsController.view.translatesAutoresizingMaskIntoConstraints = NO;
+			statsController.view.tag = 9999;
+			statsController.view.hidden = YES;
+			[self addChildViewController:statsController];
+			[self.view addSubview:statsController.view];
+
+			[NSLayoutConstraint activateConstraints:@[
+				[statsController.view.topAnchor constraintEqualToAnchor:self.view.topAnchor],
+				[statsController.view.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor],
+				[statsController.view.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
+				[statsController.view.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
+			]];
+		}
+	}
+}
+- (BOOL)shouldFinishTransitionToExpandedContentModule {
+	if ([self.module isKindOfClass:%c(CCUILowPowerModule)]) {
+		return YES;
+	}
+	return %orig;
+}
+- (CGFloat)preferredExpandedContentHeight {
+	if ([self.module isKindOfClass:%c(CCUILowPowerModule)]) {
+		return HEIGHT * 0.5;
+	}
+	return %orig;
+}
+- (CGFloat)preferredExpandedContentWidth {
+	if ([self.module isKindOfClass:%c(CCUILowPowerModule)]) {
+		return WIDTH * 0.6;
+	}
+	return %orig;
+}
+- (void)willTransitionToExpandedContentMode:(BOOL)arg0 {
+	%orig;
+	if ([self.module isKindOfClass:%c(CCUILowPowerModule)]) {
+		UIView *statsView = (UIView *)[self.view viewWithTag:9999];
+		statsView.hidden = !arg0;
+
+		self.buttonView.hidden = arg0;
+
+		if (arg0) {
+			[[NSNotificationCenter defaultCenter] postNotificationName:@"AMPReloadStatsController" object:nil];
+		}
+	}
+}
+%end
+
+%hook CCUIContentModuleContainerViewController
+- (BOOL)clickPresentationInteractionShouldPresent:(id)arg0 {
+	if ([self.moduleIdentifier isEqualToString:@"com.apple.control-center.LowPowerModule"] && SYSTEM_VERSION_GREATER_THAN(@"15.0")) {
+		return YES;
+	}
+	return %orig;
+}
+- (void)viewDidLoad {
+	%orig;
+	if ([self.moduleIdentifier isEqualToString:@"com.apple.control-center.LowPowerModule"] && SYSTEM_VERSION_GREATER_THAN(@"15.0")) {
+		AMPStatsController *statsController = [[AMPStatsController alloc] init];
+		if (![self.view.subviews containsObject:statsController.view]) {
+			statsController.view.translatesAutoresizingMaskIntoConstraints = NO;
+			statsController.view.tag = 9999;
+			statsController.view.hidden = YES;
+			[self addChildViewController:statsController];
+			[self.view addSubview:statsController.view];
+
+			[NSLayoutConstraint activateConstraints:@[
+				[statsController.view.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor],
+				[statsController.view.centerYAnchor constraintEqualToAnchor:self.view.centerYAnchor],
+				[statsController.view.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:16],
+				[statsController.view.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor constant:-16],
+				[statsController.view.heightAnchor constraintEqualToConstant:HEIGHT * 0.6],
+			]];
+		}
+	}
+}
+- (void)transitionToExpandedMode:(BOOL)arg0 {
+	%orig;
+	if ([self.moduleIdentifier isEqualToString:@"com.apple.control-center.LowPowerModule"] && SYSTEM_VERSION_GREATER_THAN(@"15.0")) {
+		UIView *statsView = (UIView *)[self.view viewWithTag:9999];
+		statsView.hidden = !arg0;
+
+		self.contentViewController.view.hidden = arg0;
+		CCUIContentModuleContentContainerView *containerView = self.contentContainerView;
+		MTMaterialView *materialView = MSHookIvar<MTMaterialView *>(containerView, "_moduleMaterialView");
+		materialView.hidden = arg0;
+
+		if (arg0) {
+			[[NSNotificationCenter defaultCenter] postNotificationName:@"AMPReloadStatsController" object:nil];
+		}
+	}
 }
 %end
 %end
@@ -290,13 +576,13 @@ static void loadPreferences(CFNotificationCenterRef center, void *observer, CFSt
 	overrideColorCritical = (overrideColorCriticalValue) ? [overrideColorCriticalValue boolValue] : NO;
 	NSNumber *useGestureValue = (NSNumber *)[[NSUserDefaults standardUserDefaults] objectForKey:@"useGesture" inDomain:domain];
 	useGesture = (useGestureValue) ? [useGestureValue boolValue] : NO;
+	NSNumber *useStatsModuleValue = (NSNumber *)[[NSUserDefaults standardUserDefaults] objectForKey:@"useStatsModule" inDomain:domain];
+	useStatsModule = (useStatsModuleValue) ? [useStatsModuleValue boolValue] : YES;
 
 	NSNumber *textStyleValue = (NSNumber *)[[NSUserDefaults standardUserDefaults] objectForKey:@"textStyle" inDomain:domain];
 	textStyle = (textStyleValue) ? [textStyleValue integerValue] : 0;
 	NSNumber *fontSizeValue = (NSNumber *)[[NSUserDefaults standardUserDefaults] objectForKey:@"fontSize" inDomain:domain];
 	fontSize = (fontSizeValue) ? [fontSizeValue integerValue] : 8;
-	NSNumber *batterySizingValue = (NSNumber *)[[NSUserDefaults standardUserDefaults] objectForKey:@"batterySizing" inDomain:domain];
-	batterySizing = (batterySizingValue) ? [batterySizingValue integerValue] : 1;
 }
 
 %ctor {
@@ -309,6 +595,9 @@ static void loadPreferences(CFNotificationCenterRef center, void *observer, CFSt
 			%init(XV);
 		} else {
 			%init(XVI);
+		}
+		if (useStatsModule) {
+			%init(BatteryInfo);
 		}
 	}
 }
