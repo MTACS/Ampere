@@ -3,7 +3,7 @@ Source for Ampere tweak for iOS 14, 15 & 16
 
 Available on [Havoc Repo](https://havoc.app/package/ampere)
 
-![banner](https://mtac.app/repo/assets/com.mtac.ampere/banner.png)
+![banner](https://github.com/MTACS/Ampere/blob/1.1/banner.png)
 
 ## Building
 
