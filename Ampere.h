@@ -1,12 +1,18 @@
 #import <UIKit/UIKit.h>
 #import "spawn.h"
-#import "RemoteLog.h"
+#import <IOKit/IOKitLib.h>
 #include <objc/runtime.h>
 
 #ifndef kCFCoreFoundationVersionNumber_iOS_16_0
 #define kCFCoreFoundationVersionNumber_iOS_16_0 1946.10
 #endif
 #define kSLSystemVersioniOS16 kCFCoreFoundationVersionNumber >= kCFCoreFoundationVersionNumber_iOS_16_0
+
+#define SYSTEM_VERSION_LESS_THAN(v) ([[[UIDevice currentDevice] systemVersion] compare:v options:NSNumericSearch] == NSOrderedAscending)
+#define SYSTEM_VERSION_GREATER_THAN(v) ([[[UIDevice currentDevice] systemVersion] compare:v options:NSNumericSearch] == NSOrderedDescending)
+
+#define WIDTH [UIScreen mainScreen].bounds.size.width
+#define HEIGHT [UIScreen mainScreen].bounds.size.height
 
 extern NSString *const kCAFilterDestOut;
 
@@ -16,6 +22,7 @@ static NSString *statusBarNotification = @"com.mtac.amp/statusbar.changed";
 static BOOL enabled;
 static BOOL showBolt;
 static BOOL useGesture;
+static BOOL useStatsModule;
 static BOOL overrideColorStandard;
 static BOOL overrideColorCharging;
 static BOOL overrideColorLowPower;
@@ -103,4 +110,62 @@ static NSInteger batterySizing;
 
 @interface _UIStatusBarDataBatteryEntry : NSObject
 @property (nonatomic) NSInteger state;
+@end
+
+@interface MTMaterialView : UIView
+@end
+
+@protocol CCUIContentModuleContentViewController <NSObject>
+@end
+
+@protocol CCUIContentModuleBackgroundViewController <NSObject>
+@end
+
+@interface CCUIContentModuleContentContainerView : UIView {
+    MTMaterialView *_moduleMaterialView;
+}
+@end
+
+@interface CCUIContentModuleContainerViewController : UIViewController
+@property (retain, nonatomic) UIViewController<CCUIContentModuleContentViewController> *contentViewController;
+@property (retain, nonatomic) UIViewController<CCUIContentModuleBackgroundViewController> *backgroundViewController;
+@property (retain, nonatomic) CCUIContentModuleContentContainerView *contentContainerView; 
+@property (copy, nonatomic) NSString *moduleIdentifier;
+@end
+
+@interface CCUIToggleModule : NSObject
+@end
+
+@interface CCUIButtonModuleView : UIControl
+@end
+
+@interface CCUIButtonModuleViewController : UIViewController 
+@property (readonly, nonatomic) CCUIButtonModuleView *buttonView;
+@end
+
+@interface CCUIToggleViewController : CCUIButtonModuleViewController 
+@property (weak, nonatomic) CCUIToggleModule *module;
+@property (readonly, nonatomic) CGFloat preferredExpandedContentHeight;
+@property (readonly, nonatomic) CGFloat preferredExpandedContentWidth;
+@property (readonly, nonatomic) BOOL providesOwnPlatter;
+@property (readonly, nonatomic) BOOL shouldPerformClickInteraction;
+@property (readonly, nonatomic) BOOL shouldPerformHoverInteraction;
+@end
+
+@interface CCUIContentModuleContext : NSObject
+@property (readonly, copy, nonatomic) NSString *moduleIdentifier;
+@end
+
+@interface CCUIMenuModuleViewController : CCUIButtonModuleViewController 
+@property (weak, nonatomic) CCUIContentModuleContext *contentModuleContext; 
+@end
+
+@interface CCUILowPowerModuleViewController : CCUIMenuModuleViewController
+@end
+
+@interface CCUILowPowerModule : NSObject
+@end
+
+@interface AMPStatsController : UIViewController <UITableViewDelegate, UITableViewDataSource, CCUIContentModuleContentViewController>
+@property (nonatomic, strong) UITableView *tableView;
 @end

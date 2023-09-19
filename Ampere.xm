@@ -1,5 +1,239 @@
 #import "Ampere.h"
 
+NSString *batteryCharging() {
+	UIDevice *device = [UIDevice currentDevice];
+	device.batteryMonitoringEnabled = YES;
+	switch ([device batteryState]) {
+		case UIDeviceBatteryStateCharging:
+			return @"Yes";
+		case UIDeviceBatteryStateFull:
+		case UIDeviceBatteryStateUnplugged:
+		case UIDeviceBatteryStateUnknown:
+		default:
+			return @"No";
+	}
+}
+
+NSString *celsiusTemperature() {
+	io_service_t powerSource = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOPMPowerSource"));
+	if (powerSource) {
+		CFMutableDictionaryRef batteryDictionaryRef = NULL;
+		if (IORegistryEntryCreateCFProperties(powerSource, &batteryDictionaryRef, 0, 0) == KERN_SUCCESS) {
+			float temperature = -1;
+			CFNumberRef temperatureRef = (CFNumberRef)IORegistryEntryCreateCFProperty(powerSource, CFSTR("Temperature"), kCFAllocatorDefault, 0);
+			CFNumberGetValue(temperatureRef, kCFNumberFloatType, &temperature);
+			CFRelease(temperatureRef);
+			return [NSString stringWithFormat:@"%.1f°C", temperature / 100];
+		}
+	}
+	return @"--°C";
+}
+
+NSString *fahrenheitTemperature() {
+	NSString *celsiusMethod = celsiusTemperature();
+	NSString *celsius = [celsiusMethod substringToIndex:celsiusMethod.length - 2];
+	if ([celsius isEqualToString:@"--"])
+		return [celsius stringByAppendingString:@"°F"];
+	return [NSString stringWithFormat:@"%.1f°F", [celsius floatValue] * 1.8 + 32.0];
+}
+
+NSString *cycles() {
+	io_service_t powerSource = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOPMPowerSource"));
+	if (powerSource) {
+		CFMutableDictionaryRef batteryDictionaryRef = NULL;
+		if (IORegistryEntryCreateCFProperties(powerSource, &batteryDictionaryRef, 0, 0) == KERN_SUCCESS) {
+			int cycles = -1;
+			CFNumberRef cyclesRef = (CFNumberRef)IORegistryEntryCreateCFProperty(powerSource, CFSTR("CycleCount"), kCFAllocatorDefault, 0);
+			CFNumberGetValue(cyclesRef, kCFNumberIntType, &cycles);
+			CFRelease(cyclesRef);
+			return [NSString stringWithFormat:@"%d", cycles];
+		}
+	}
+	return @"-";
+}
+
+int maxCapacity() {
+	io_service_t powerSource = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOPMPowerSource"));
+	if (powerSource) {
+		CFMutableDictionaryRef batteryDictionaryRef = NULL;
+		if (IORegistryEntryCreateCFProperties(powerSource, &batteryDictionaryRef, 0, 0) == KERN_SUCCESS) {
+			int maxCapacity = -1;
+			CFNumberRef maxCapRef = (CFNumberRef)IORegistryEntryCreateCFProperty(powerSource, CFSTR("AppleRawMaxCapacity"), kCFAllocatorDefault, 0);
+			CFNumberGetValue(maxCapRef, kCFNumberIntType, &maxCapacity);
+			CFRelease(maxCapRef);
+			return maxCapacity;
+		}
+	}
+	return -1;
+}
+
+int designCapacity() {
+	io_service_t powerSource = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOPMPowerSource"));
+	if (powerSource) {
+		CFMutableDictionaryRef batteryDictionaryRef = NULL;
+		if (IORegistryEntryCreateCFProperties(powerSource, &batteryDictionaryRef, 0, 0) == KERN_SUCCESS) {
+			int designCapacity = -1;
+			CFNumberRef designCapRef = (CFNumberRef)IORegistryEntryCreateCFProperty(powerSource, CFSTR("DesignCapacity"), kCFAllocatorDefault, 0);
+			CFNumberGetValue(designCapRef, kCFNumberIntType, &designCapacity);
+			CFRelease(designCapRef);
+			return designCapacity;
+		}
+	}
+	return -1;
+}
+
+NSString *amperage() {
+	io_service_t powerSource = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOPMPowerSource"));
+	if (powerSource) {
+		CFMutableDictionaryRef batteryDictionaryRef = NULL;
+		if (IORegistryEntryCreateCFProperties(powerSource, &batteryDictionaryRef, 0, 0) == KERN_SUCCESS) {
+			int amperage = -1;
+			CFNumberRef amperageRef = (CFNumberRef)IORegistryEntryCreateCFProperty(powerSource, CFSTR("InstantAmperage"), kCFAllocatorDefault, 0);
+			CFNumberGetValue(amperageRef, kCFNumberIntType, &amperage);
+			CFRelease(amperageRef);
+			return [NSString stringWithFormat:@"%d mA", amperage];
+		}
+	}
+	return @"- mA";
+}
+
+NSString *voltage() {
+	io_service_t powerSource = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOPMPowerSource"));
+	if (powerSource) {
+		CFMutableDictionaryRef batteryDictionaryRef = NULL;
+		if (IORegistryEntryCreateCFProperties(powerSource, &batteryDictionaryRef, 0, 0) == KERN_SUCCESS) {
+			float voltage = -1;
+			CFNumberRef voltageRef = (CFNumberRef)IORegistryEntryCreateCFProperty(powerSource, CFSTR("Voltage"), kCFAllocatorDefault, 0);
+			CFNumberGetValue(voltageRef, kCFNumberFloatType, &voltage);
+			CFRelease(voltageRef);
+			return [NSString stringWithFormat:@"%.1f V", voltage / 1000];
+		}
+	}
+	return @"- V";
+}
+
+@implementation AMPStatsController
+- (id)init {
+	self = [super init];
+	if (self) {
+		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(reloadData) name:@"AMPReloadStatsController" object:nil];
+		[[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(reloadData) name:@"SBUIACStatusChangedNotification" object:nil];
+	}
+	return self;
+}
+- (void)viewDidLoad {
+    [super viewDidLoad];
+
+    self.tableView = [[UITableView alloc] initWithFrame:CGRectZero style:UITableViewStyleInsetGrouped];
+    self.tableView.translatesAutoresizingMaskIntoConstraints = NO;
+	self.tableView.delegate = self;
+    self.tableView.dataSource = self;
+	self.tableView.separatorColor = [UIColor clearColor];
+	self.tableView.backgroundColor = [UIColor clearColor];
+	self.tableView.userInteractionEnabled = NO;
+    [self.view addSubview:self.tableView];
+
+	[NSLayoutConstraint activateConstraints:@[
+		[self.tableView.topAnchor constraintEqualToAnchor:self.view.topAnchor],
+		[self.tableView.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor],
+		[self.tableView.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
+		[self.tableView.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
+	]];
+}
+- (double)tableView:(id)arg1 heightForRowAtIndexPath:(id)arg2 {
+	return 44.0;
+}
+- (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
+	return 1;
+}
+- (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+	return 8;
+}
+- (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+	static NSString *identifier = @"Cell";
+	UITableViewCell *cell = [tableView dequeueReusableCellWithIdentifier:identifier];
+	if (!cell) {
+		cell = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleDefault reuseIdentifier:identifier];
+	}
+	cell.backgroundColor = [UIColor clearColor];
+	UIListContentConfiguration *content = [cell defaultContentConfiguration];
+	[content setText:[self titleForRow:indexPath.row]];
+	[content.textProperties setColor:[UIColor whiteColor]];
+	[content setSecondaryText:[self detailForRow:indexPath.row]];
+	[content.secondaryTextProperties setColor:[UIColor colorWithWhite:1.0 alpha:0.75]];
+	[content.secondaryTextProperties setFont:[UIFont systemFontOfSize:18]];
+	[content setPrefersSideBySideTextAndSecondaryText:YES];
+	[cell setContentConfiguration:content];
+
+	return cell;
+}
+- (NSString *)titleForRow:(NSInteger)row {
+	NSString *title;
+	switch (row) {
+		case 0:
+			title = @"Charging";
+			break;
+		case 1:
+			title = @"Cycles";
+			break;
+		case 2:
+			title = @"Temperature";
+			break;
+		case 3:
+			title = @"Health";
+			break;
+		case 4:
+			title = @"Max Capacity";
+			break;
+		case 5:
+			title = @"Design Capacity";
+			break;
+		case 6:
+			title = @"Amperage";
+			break;
+		case 7:
+			title = @"Voltage";
+	}
+	return title;
+}
+- (NSString *)detailForRow:(NSInteger)row {
+	NSString *detail;
+	switch (row) {
+		case 0:
+			detail = batteryCharging();
+			break;
+		case 1:
+			detail = cycles();
+			break;
+		case 2:
+			detail = [NSString stringWithFormat:@"%@/%@", celsiusTemperature(), fahrenheitTemperature()];
+			break;
+		case 3:
+			detail = [NSString stringWithFormat:@"%0.f%%", (CGFloat)maxCapacity() / (CGFloat)designCapacity() * 100];
+			break;
+		case 4:
+			detail = [NSString stringWithFormat:@"%d mAh", maxCapacity()];
+			break;
+		case 5:
+			detail = [NSString stringWithFormat:@"%d mAh", designCapacity()];
+			break;
+		case 6:
+			detail = amperage();
+			break;
+		case 7:
+			detail = voltage();
+			break;
+	}
+	return detail;
+}
+- (void)reloadData {
+	[self.tableView reloadData];
+}
+- (BOOL)_canShowWhileLocked {
+	return YES;
+}
+@end
+
 %group Ampere
 %hook _UIStatusBarBatteryItem
 - (_UIBatteryView *)batteryView {
@@ -221,13 +455,113 @@
 %end
 %end
 
+%group BatteryInfo
+%hook CCUIToggleViewController
+- (void)viewDidLoad {
+	%orig;
+	if ([self.module isKindOfClass:%c(CCUILowPowerModule)]) {
+		AMPStatsController *statsController = [[AMPStatsController alloc] init];
+		if (![self.view.subviews containsObject:statsController.view]) {
+			statsController.view.translatesAutoresizingMaskIntoConstraints = NO;
+			statsController.view.tag = 9999;
+			statsController.view.hidden = YES;
+			[self addChildViewController:statsController];
+			[self.view addSubview:statsController.view];
+
+			[NSLayoutConstraint activateConstraints:@[
+				[statsController.view.topAnchor constraintEqualToAnchor:self.view.topAnchor],
+				[statsController.view.bottomAnchor constraintEqualToAnchor:self.view.bottomAnchor],
+				[statsController.view.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor],
+				[statsController.view.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor],
+			]];
+		}
+	}
+}
+- (BOOL)shouldFinishTransitionToExpandedContentModule {
+	if ([self.module isKindOfClass:%c(CCUILowPowerModule)]) {
+		return YES;
+	}
+	return %orig;
+}
+- (CGFloat)preferredExpandedContentHeight {
+	if ([self.module isKindOfClass:%c(CCUILowPowerModule)]) {
+		return HEIGHT * 0.5;
+	}
+	return %orig;
+}
+- (CGFloat)preferredExpandedContentWidth {
+	if ([self.module isKindOfClass:%c(CCUILowPowerModule)]) {
+		return WIDTH * 0.6;
+	}
+	return %orig;
+}
+- (void)willTransitionToExpandedContentMode:(BOOL)arg0 {
+	%orig;
+	if ([self.module isKindOfClass:%c(CCUILowPowerModule)]) {
+		UIView *statsView = (UIView *)[self.view viewWithTag:9999];
+		statsView.hidden = !arg0;
+
+		self.buttonView.hidden = arg0;
+
+		if (arg0) {
+			[[NSNotificationCenter defaultCenter] postNotificationName:@"AMPReloadStatsController" object:nil];
+		}
+	}
+}
+%end
+
+%hook CCUIContentModuleContainerViewController
+- (BOOL)clickPresentationInteractionShouldPresent:(id)arg0 {
+	if ([self.moduleIdentifier isEqualToString:@"com.apple.control-center.LowPowerModule"] && SYSTEM_VERSION_GREATER_THAN(@"15.0")) {
+		return YES;
+	}
+	return %orig;
+}
+- (void)viewDidLoad {
+	%orig;
+	if ([self.moduleIdentifier isEqualToString:@"com.apple.control-center.LowPowerModule"] && SYSTEM_VERSION_GREATER_THAN(@"15.0")) {
+		AMPStatsController *statsController = [[AMPStatsController alloc] init];
+		if (![self.view.subviews containsObject:statsController.view]) {
+			statsController.view.translatesAutoresizingMaskIntoConstraints = NO;
+			statsController.view.tag = 9999;
+			statsController.view.hidden = YES;
+			[self addChildViewController:statsController];
+			[self.view addSubview:statsController.view];
+
+			[NSLayoutConstraint activateConstraints:@[
+				[statsController.view.centerXAnchor constraintEqualToAnchor:self.view.centerXAnchor],
+				[statsController.view.centerYAnchor constraintEqualToAnchor:self.view.centerYAnchor],
+				[statsController.view.leadingAnchor constraintEqualToAnchor:self.view.leadingAnchor constant:16],
+				[statsController.view.trailingAnchor constraintEqualToAnchor:self.view.trailingAnchor constant:-16],
+				[statsController.view.heightAnchor constraintEqualToConstant:HEIGHT * 0.6],
+			]];
+		}
+	}
+}
+- (void)transitionToExpandedMode:(BOOL)arg0 {
+	%orig;
+	if ([self.moduleIdentifier isEqualToString:@"com.apple.control-center.LowPowerModule"] && SYSTEM_VERSION_GREATER_THAN(@"15.0")) {
+		UIView *statsView = (UIView *)[self.view viewWithTag:9999];
+		statsView.hidden = !arg0;
+
+		self.contentViewController.view.hidden = arg0;
+		CCUIContentModuleContentContainerView *containerView = self.contentContainerView;
+		MTMaterialView *materialView = MSHookIvar<MTMaterialView *>(containerView, "_moduleMaterialView");
+		materialView.hidden = arg0;
+
+		if (arg0) {
+			[[NSNotificationCenter defaultCenter] postNotificationName:@"AMPReloadStatsController" object:nil];
+		}
+	}
+}
+%end
+%end
+
 static void reloadStatusBar(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo) {
 	[[NSNotificationCenter defaultCenter] postNotificationName:@"AmpereUpdate" object:nil]; // Post local update notification
 }
 
 static void loadPreferences(CFNotificationCenterRef center, void *observer, CFStringRef name, const void *object, CFDictionaryRef userInfo) {
-	RLog(@"AMPERE DEBUG: Loading preferences");
-	
 	NSNumber *enabledValue = (NSNumber *)[[NSUserDefaults standardUserDefaults] objectForKey:@"enabled" inDomain:domain];
 	enabled = (enabledValue) ? [enabledValue boolValue] : NO;
 	NSNumber *showBoltValue = (NSNumber *)[[NSUserDefaults standardUserDefaults] objectForKey:@"showBolt" inDomain: domain];
@@ -242,6 +576,8 @@ static void loadPreferences(CFNotificationCenterRef center, void *observer, CFSt
 	overrideColorCritical = (overrideColorCriticalValue) ? [overrideColorCriticalValue boolValue] : NO;
 	NSNumber *useGestureValue = (NSNumber *)[[NSUserDefaults standardUserDefaults] objectForKey:@"useGesture" inDomain:domain];
 	useGesture = (useGestureValue) ? [useGestureValue boolValue] : NO;
+	NSNumber *useStatsModuleValue = (NSNumber *)[[NSUserDefaults standardUserDefaults] objectForKey:@"useStatsModule" inDomain:domain];
+	useStatsModule = (useStatsModuleValue) ? [useStatsModuleValue boolValue] : YES;
 
 	NSNumber *textStyleValue = (NSNumber *)[[NSUserDefaults standardUserDefaults] objectForKey:@"textStyle" inDomain:domain];
 	textStyle = (textStyleValue) ? [textStyleValue integerValue] : 0;
@@ -259,6 +595,9 @@ static void loadPreferences(CFNotificationCenterRef center, void *observer, CFSt
 			%init(XV);
 		} else {
 			%init(XVI);
+		}
+		if (useStatsModule) {
+			%init(BatteryInfo);
 		}
 	}
 }

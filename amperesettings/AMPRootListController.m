@@ -9,6 +9,15 @@
 	if (!_specifiers) {
 		_specifiers = [self loadSpecifiersFromPlistName:@"Root" target:self];
 	}
+
+	for (PSSpecifier *specifier in _specifiers) {
+		if (specifier.properties[@"iconImageSystem"] != nil) {
+			NSDictionary *systemIconDict = specifier.properties[@"iconImageSystem"];
+			UIImageSymbolConfiguration *configuration = [UIImageSymbolConfiguration configurationWithPointSize:18 weight:UIImageSymbolWeightSemibold scale:UIImageSymbolScaleMedium];
+			UIImage *systemIcon = [[UIImage systemImageNamed:systemIconDict[@"name"] withConfiguration:configuration] imageWithTintColor:[UIColor systemGreenColor]];
+			[specifier setProperty:systemIcon forKey:@"iconImage"];
+		}
+	}
 	return _specifiers;
 }
 - (UITableViewStyle)tableViewStyle {
@@ -24,6 +33,9 @@
 		self.enableSwitch.trackOnTintColor = [UIColor secondaryLabelColor];
 		self.enableSwitch.trackOffTintColor = [UIColor secondaryLabelColor];
 		[self setupButtonMenu];
+
+		self.navigationController.navigationBar.prefersLargeTitles = YES;
+		self.navigationItem.largeTitleDisplayMode = UINavigationItemLargeTitleDisplayModeAlways;
 	}
 	return self;
 }
@@ -53,7 +65,7 @@
 
 	self.view.tintColor = [UIColor systemGreenColor];
 	[[UIApplication sharedApplication] keyWindow].tintColor = [UIColor systemGreenColor];
-	[self.navigationController.navigationBar setPrefersLargeTitles:NO];
+	[self.navigationController.navigationItem.navigationBar sizeToFit];
 	_table.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
 }
 - (void)viewWillDisappear:(BOOL)animated {
@@ -65,7 +77,7 @@
 
 	self.navigationItem.largeTitleDisplayMode = UINavigationItemLargeTitleDisplayModeAlways;
 	
-	self.headerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 200, 300)];
+	self.headerView = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 200, 280)];
 	self.enableSwitch.translatesAutoresizingMaskIntoConstraints = NO;
 
 	self.batteryView = [[UIImageView alloc] initWithFrame:CGRectZero];
@@ -85,13 +97,6 @@
 	glowanimation.duration = 1.0;
 	glowanimation.repeatCount = HUGE_VALF;
 	[self.batteryView.layer addAnimation:glowanimation forKey:@"glow"];
-
-	UILabel *titleLabel = [[UILabel alloc] initWithFrame:CGRectZero];
-	titleLabel.text = @"Ampere";
-	titleLabel.textColor = [UIColor labelColor];
-	titleLabel.font = [UIFont systemFontOfSize:36.0f weight:UIFontWeightBold];
-	titleLabel.textAlignment = NSTextAlignmentCenter;
-	titleLabel.translatesAutoresizingMaskIntoConstraints = NO;
 
 	self.segmentedControl = [[UISegmentedControl alloc] initWithItems:@[@"Charging", @"Normal", @"Low Power", @"Critical"]];
 	self.segmentedControl.translatesAutoresizingMaskIntoConstraints = NO;
@@ -116,21 +121,16 @@
 	[self.headerView addSubview:self.batteryView];
 	[self.headerView addSubview:self.sectionSegmentLabel];
 	[self.headerView addSubview:self.segmentedControl];
-	[self.headerView addSubview:titleLabel];
 
     [NSLayoutConstraint activateConstraints:@[
 		[self.batteryView.widthAnchor constraintEqualToConstant:50],
 		[self.batteryView.heightAnchor constraintEqualToConstant:75],
-		[self.batteryView.trailingAnchor constraintEqualToAnchor:self.headerView.centerXAnchor constant:-20],
-		[self.batteryView.topAnchor constraintEqualToAnchor:self.headerView.topAnchor],
-		[self.enableSwitch.centerYAnchor constraintEqualToAnchor:self.batteryView.centerYAnchor],
-		[self.enableSwitch.leadingAnchor constraintEqualToAnchor:self.headerView.centerXAnchor constant:20],
+		[self.batteryView.centerXAnchor constraintEqualToAnchor:self.headerView.centerXAnchor],
+		[self.batteryView.topAnchor constraintEqualToAnchor:self.headerView.topAnchor constant:8],
+		[self.enableSwitch.topAnchor constraintEqualToAnchor:self.batteryView.bottomAnchor constant:8],
+		[self.enableSwitch.centerXAnchor constraintEqualToAnchor:self.headerView.centerXAnchor],
 		[self.enableSwitch.widthAnchor constraintEqualToConstant:50],
 		[self.enableSwitch.heightAnchor constraintEqualToConstant:40],
-		[titleLabel.topAnchor constraintEqualToAnchor:self.batteryView.bottomAnchor constant:10],
-		[titleLabel.leadingAnchor constraintEqualToAnchor:self.headerView.leadingAnchor],
-		[titleLabel.trailingAnchor constraintEqualToAnchor:self.headerView.trailingAnchor],
-		[titleLabel.heightAnchor constraintEqualToConstant:50],
 		[self.segmentedControl.bottomAnchor constraintEqualToAnchor:self.headerView.bottomAnchor constant:-30],
 		[self.segmentedControl.leadingAnchor constraintEqualToAnchor:self.headerView.leadingAnchor constant:16],
 		[self.segmentedControl.trailingAnchor constraintEqualToAnchor:self.headerView.trailingAnchor constant:-16],
@@ -182,48 +182,14 @@
 	return [super tableView:tableView cellForRowAtIndexPath:indexPath];
 }
 - (UIView *)tableView:(UITableView *)tableView viewForHeaderInSection:(NSInteger)section {
-	UIView *sectionHeader = [[UIView alloc] initWithFrame:CGRectMake(0, 0, 200, 30)];
-	UIImage *sectionImage;
-	UIImageView *sectionImageView = [[UIImageView alloc] initWithFrame:CGRectMake(0, 0, 30, 30)];
-	sectionImageView.translatesAutoresizingMaskIntoConstraints = NO;
-	sectionImageView.contentMode = UIViewContentModeScaleAspectFit;
-
-	switch (section) {
-		case 0:
-			sectionImage = [[UIImage systemImageNamed:@"percent"] imageWithTintColor:[UIColor systemGreenColor]];
-			break;
-		case 1:
-			sectionImage = [[UIImage systemImageNamed:@"battery.100"] imageWithTintColor:[UIColor systemGreenColor]];
-			break;
-		case 2:
-			sectionImage = [[UIImage systemImageNamed:@"textformat"] imageWithTintColor:[UIColor systemGreenColor]];
-			break;
-		case 3:
-			sectionImage = [[UIImage systemImageNamed:@"square.fill.on.square.fill"] imageWithTintColor:[UIColor systemGreenColor]];
-			break;
-		case 4:
-			sectionImage = [[UIImage systemImageNamed:@"bolt.fill"] imageWithTintColor:[UIColor systemGreenColor]];
-			break;
-		case 5:
-			sectionImage = [[UIImage systemImageNamed:@"hand.point.up.fill"] imageWithTintColor:[UIColor systemGreenColor]];
-			break;
-		case 6:
-			sectionImage = [[UIImage systemImageNamed:@"link"] imageWithTintColor:[UIColor systemGreenColor]];
-			break;
-		default:
-			break;
+	UILabel *titleLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, 200, 30)];
+	NSString *title = [self tableView:tableView titleForHeaderInSection:section];
+	if (title != nil) {
+		titleLabel.textColor = [UIColor secondaryLabelColor];
+		titleLabel.font = [UIFont systemFontOfSize:20 weight:UIFontWeightSemibold];
+		titleLabel.text = [NSString stringWithFormat:@" %@", title];
 	}
-	sectionImageView.image = sectionImage;
-	[sectionHeader addSubview:sectionImageView];
-
-	[NSLayoutConstraint activateConstraints:@[
-		[sectionImageView.leadingAnchor constraintEqualToAnchor:sectionHeader.leadingAnchor constant:8],
-		[sectionImageView.centerYAnchor constraintEqualToAnchor:sectionHeader.centerYAnchor],
-		[sectionImageView.widthAnchor constraintEqualToConstant:20],
-		[sectionImageView.heightAnchor constraintEqualToConstant:20],
-	]];
-	
-	return sectionHeader;
+	return titleLabel;
 }
 - (CGFloat)tableView:(UITableView *)tableView heightForHeaderInSection:(NSInteger)section {
 	if ([self tableView:tableView titleForHeaderInSection:section] != nil) {
@@ -239,7 +205,7 @@
 		titleLabel.textAlignment = NSTextAlignmentCenter;
 		
 		NSString *primary = @"Ampere";
-		NSString *secondary = @"v1.1 © MTAC";
+		NSString *secondary = @"v1.2 © MTAC";
 
 		NSMutableAttributedString *final = [[NSMutableAttributedString alloc] initWithString:[NSString stringWithFormat:@"%@\n%@", primary, secondary]];
 		[final addAttribute:NSFontAttributeName value:[UIFont systemFontOfSize:18 weight:UIFontWeightSemibold] range:[final.string rangeOfString:primary]];
