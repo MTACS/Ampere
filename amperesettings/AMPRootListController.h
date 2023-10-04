@@ -1,5 +1,7 @@
 #import <Preferences/PSListController.h>
 #import <Preferences/PSTableCell.h>
+#import <Preferences/PSSpecifier.h>
+#import <Preferences/PSSwitchTableCell.h>
 #import "AmpSwitch.h"
 #import "spawn.h"
 
@@ -24,24 +26,20 @@ static NSString *domain = @"com.mtac.amp";
 @property (assign, nonatomic) UINavigationBar *navigationBar; 
 @end
 
-@interface PSSpecifier : NSObject
-@property (nonatomic, retain) NSString *name;   
-- (NSDictionary *)properties;
-- (void)setProperty:(id)arg0 forKey:(id)arg1;
-@end
-
 @interface PSTableCell (Ampere)
 - (void)setValue:(id)arg0;
 @end
 
-@interface PSControlTableCell : PSTableCell
-- (UIControl *)control;
-- (void)controlChanged:(UIControl *)arg1;
+@interface FBSSystemService : NSObject
++ (id)sharedService;
+- (void)sendActions:(id)arg1 withResult:(id)arg2;
 @end
 
-@interface PSSwitchTableCell : PSControlTableCell
-- (id)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(id)identifier specifier:(id)specifier;
-- (void)controlChanged:(id)arg1;
+@interface BSAction : NSObject
+@end
+
+@interface SBSRelaunchAction : BSAction
++ (id)actionWithReason:(id)arg1 options:(unsigned long long)arg2 targetURL:(id)arg3;
 @end
 
 @interface AmpColorCell : PSControlTableCell <UIColorPickerViewControllerDelegate>

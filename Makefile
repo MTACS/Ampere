@@ -1,8 +1,6 @@
 TARGET := iphone:clang:latest:14.0
-INSTALL_TARGET_PROCESSES = SpringBoard
+INSTALL_TARGET_PROCESSES = SpringBoard Preferences
 ARCHS = arm64 arm64e
-DEBUG = 0
-FINALPACKAGE = 1
 
 include $(THEOS)/makefiles/common.mk
 
@@ -10,6 +8,7 @@ TWEAK_NAME = Ampere
 
 Ampere_CFLAGS = -fobjc-arc -Wdeprecated-declarations -Wno-deprecated-declarations
 Ampere_FILES = Ampere.xm
+Ampere_FRAMEWORKS = IOKit
 
 include $(THEOS_MAKE_PATH)/tweak.mk
 SUBPROJECTS += amperesettings
