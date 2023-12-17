@@ -1,4 +1,6 @@
 #import "Ampere.h"
+#include <rootless.h>
+#include <roothide.h>
 
 NSString *batteryCharging() {
 	UIDevice *device = [UIDevice currentDevice];
