@@ -7,7 +7,7 @@ Available on [TweaksDev22 Repo]
 
 ## Building
 
-`git clone [https://github.com/MTACS/Ampere.git](https://github.com/TweaksDev22/Ampere.git)`
+`git clone (https://github.com/TweaksDev22/Ampere.git)`
 
 `cd Ampere`
 
