@@ -1,6 +1,6 @@
 #include "AMPRootListController.h"
 
-#define ROOT_PATH(path)([[NSFileManager defaultManager] fileExistsAtPath:path] ? path : [@"/var/jb" stringByAppendingPathComponent:path])
+#define ROOT_PATH_NS(path)([[NSFileManager defaultManager] fileExistsAtPath:path] ? path : [@"/var/jb" stringByAppendingPathComponent:path])
 
 @import SafariServices;
 
