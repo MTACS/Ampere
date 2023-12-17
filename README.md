@@ -1,13 +1,13 @@
 # Ampere
 Source for Ampere tweak for iOS 14, 15 & 16 ( Roothide )
 
-Available on [TweaksDev22 Repo]([https://havoc.app/package/ampere](https://github.com/TweaksDev22/Ampere.git))
+Available on [TweaksDev22 Repo] 
 
 ![banner](https://github.com/MTACS/Ampere/blob/1.1/banner.png)
 
 ## Building
 
-`git clone https://github.com/MTACS/Ampere.git`
+`git clone [https://github.com/MTACS/Ampere.git](https://github.com/TweaksDev22/Ampere.git)`
 
 `cd Ampere`
 
