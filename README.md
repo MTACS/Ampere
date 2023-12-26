@@ -1,7 +1,7 @@
 # Ampere
 Source for Ampere tweak for iOS 14, 15 & 16
 
-Available on [Havoc Repo](https://havoc.app/package/ampere)
+Available for rootful & rootless on [Havoc Repo](https://havoc.app/package/ampere). RootHide package available [here](https://mtac.app/repo/debs/com.mtac.ampere_1.4_iphoneos-arm64e.deb)
 
 ![banner](https://github.com/MTACS/Ampere/blob/1.1/banner.png)
 
