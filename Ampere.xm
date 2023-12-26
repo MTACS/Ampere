@@ -363,7 +363,7 @@ NSString *voltage() {
 
 %hook _UIBatteryView
 - (BOOL)_batteryTextIsCutout {
-	if (textStyle == 1) {
+	if (textStyle == 1 || [[NSBundle mainBundle].bundleIdentifier isEqualToString:@"com.apple.CarPlayApp"]) {
 		return YES;
 	}
 	return %orig;
@@ -451,6 +451,96 @@ NSString *voltage() {
 %hook _UIStatusBarBatteryItem
 + (id)staticIconDisplayIdentifier {
 	return [self iconDisplayIdentifier]; // Override static identifier, used in iPhone Control Center & everywhere on iPad
+}
+%end
+%end
+
+%group AmpereCarPlay
+%hook _UIBatteryView
+- (void)setSaverModeActive:(BOOL)arg1 {
+	%orig;
+	[self _updatePercentage];
+}
+- (void)_createBodyLayers {
+	%orig;
+	[self _updatePercentageFont];
+}
+- (BOOL)showsPercentage {
+	return YES;
+}
+- (BOOL)_shouldShowBolt {
+	return NO;
+}
+- (BOOL)showsInlineChargingIndicator {
+	return NO;
+}
+- (CGFloat)_lineWidthAndInterspaceForTraitCollection:(id)arg0 {
+	return 0;
+}
+- (void)_updatePercentage {
+	%orig;
+	[self.percentageLabel setFrame:CGRectMake(-1, self.bounds.origin.y, self.bounds.size.width -0.5, self.bounds.size.height)];
+	[self.percentageLabel setTextAlignment:(NSTextAlignment)1];
+	[self.percentageLabel setText:[NSString stringWithFormat:@"%.f", [self chargePercent] * 100]];
+	self.percentageLabel.alpha = 1.0;
+	// UIFontDescriptor *fontDescriptor = [UIFontDescriptor fontDescriptorWithName:@".SFUI-SemiCondensedBold" size:11];
+	self.percentageLabel.font = [UIFont monospacedDigitSystemFontOfSize:10 weight:UIFontWeightBold]; // Set custom percentage font size
+	self.percentageLabel.textColor = [self _batteryTextColor];
+	// self.percentageLabel.font = [UIFont fontWithDescriptor:fontDescriptor size:11];
+	if (self.chargePercent != 1.0) { // Show bolt next to percentage label text
+		NSTextAttachment *attachment = [[NSTextAttachment alloc] init];
+		[attachment setBounds:CGRectMake(0, 0, roundf(self.percentageLabel.font.capHeight * 0.6), roundf(self.percentageLabel.font.capHeight))];
+		[attachment setImage:[[UIImage systemImageNamed:@"bolt.fill"] imageWithTintColor:(self.saverModeActive) ? [UIColor blackColor] : [self _batteryTextColor]]];
+	
+		NSMutableAttributedString *atr = [[NSMutableAttributedString alloc] initWithString:[NSString stringWithFormat:@"%.f", [self chargePercent] * 100]];
+		[atr appendAttributedString:[NSAttributedString attributedStringWithAttachment:attachment]];		
+		self.percentageLabel.attributedText = atr;
+	}
+	self.percentageLabel.layer.allowsGroupBlending = YES;
+	self.percentageLabel.layer.allowsGroupOpacity = YES;
+	self.percentageLabel.layer.compositingFilter = (textStyle == 1) || (textStyle == 0 && (self.chargingState != 1) && !self.saverModeActive) ? kCAFilterDestOut : nil; // Enable cutout effect on text when in transparent mode or default (when not charging)
+
+	self.pinColor = (self.chargePercent > 0.97) ? [self _batteryFillColor] : [self bodyColor];
+}
+- (CALayer *)fillLayer {
+	CALayer *fill = %orig;
+	fill.maskedCorners = (self.chargePercent > 0.82) ? (kCALayerMaxXMaxYCorner | kCALayerMaxXMinYCorner | kCALayerMinXMaxYCorner | kCALayerMinXMinYCorner) : (kCALayerMinXMaxYCorner | kCALayerMinXMinYCorner); // Rounded corners always on leading edge, flat on trailing until above 92% to match stock radius
+	fill.frame = CGRectMake(fill.frame.origin.x, fill.bounds.origin.y, fill.bounds.size.width - 0.5, self.bounds.size.height);
+	return fill;
+}
+- (CAShapeLayer *)bodyShapeLayer {
+	CAShapeLayer *bodyLayer = %orig;
+	bodyLayer.fillColor = [[UIColor labelColor] colorWithAlphaComponent:0.4].CGColor; // Fill exisiting battery view completely
+	return bodyLayer;
+}
+- (void)_updateFillLayer {
+	%orig;
+	[self.fillLayer setCornerRadius:3]; // Set fill corner radius whenever layer updates
+	[self.fillLayer setCornerCurve:@"circular"];
+}
+- (UIColor *)pinColor {
+	return (self.chargePercent > 0.97) ? [self _batteryFillColor] : [self bodyColor]; // Set pin color to fill color, but only when charge exceeds frame of regular battery body
+}
+- (CGRect)_bodyRectForTraitCollection:(id)arg0 {
+	CGRect bodyRect = %orig;
+	return CGRectMake(bodyRect.origin.x, bodyRect.origin.y, bodyRect.size.width - 1, bodyRect.size.height); // Resize view height to better replicate iOS 16
+} 
++ (id)_pinBezierPathForSize:(struct CGSize )arg0 complex:(BOOL)arg1 {
+	UIBezierPath *path = %orig;
+	[path applyTransform:CGAffineTransformMakeTranslation(2, 0)]; // Shift pin 1 px, done because setting line interspace width to fill body adds borderr
+	return path;
+}
+- (id)_batteryTextColor {
+	if (textStyle == 0) {
+		if (self.saverModeActive) {
+			return [UIColor blackColor];
+		}
+	} else if (textStyle == 2) { // Use custom percentage text color
+		NSDictionary *textColorDict = [[NSUserDefaults standardUserDefaults] objectForKey:@"textColorDict" inDomain:domain];
+		UIColor *textColor = [UIColor colorWithRed:[textColorDict[@"red"] floatValue] green:[textColorDict[@"green"] floatValue] blue:[textColorDict[@"blue"] floatValue] alpha:1.0];
+		return textColor;
+	}
+	return %orig;
 }
 %end
 %end
@@ -595,6 +685,9 @@ static void loadPreferences(CFNotificationCenterRef center, void *observer, CFSt
 			%init(XV);
 		} else {
 			%init(XVI);
+			if ([[NSBundle mainBundle].bundleIdentifier isEqualToString:@"com.apple.CarPlayApp"]) {
+				%init(AmpereCarPlay);
+			}
 		}
 		if (useStatsModule) {
 			%init(BatteryInfo);

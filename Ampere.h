@@ -62,7 +62,10 @@ static NSInteger batterySizing;
 @property (retain, nonatomic) UILabel *percentageLabel;
 @property (retain, nonatomic) CALayer *fillLayer;
 @property (retain, nonatomic) CALayer *pinLayer; 
+@property (retain, nonatomic) CALayer *bodyLayer;
+@property (readonly, nonatomic) CAShapeLayer *bodyShapeLayer;
 @property (copy, nonatomic) UIColor *pinColor;
+@property (copy, nonatomic) UIColor *bodyColor; 
 @property (nonatomic) CGFloat pinColorAlpha; 
 @property (nonatomic) CGFloat bodyColorAlpha;
 @property (nonatomic) CGFloat chargePercent;
@@ -70,10 +73,12 @@ static NSInteger batterySizing;
 @property (nonatomic) NSInteger chargingState;
 @property (nonatomic) NSInteger iconSize;
 - (CGRect)_bodyRectForTraitCollection:(id)arg0;
+- (struct CGRect )_updateBodyLayers;
 - (id)_batteryFillColor;
 - (id)_batteryTextColor;
 - (void)_updateBatteryFillColor;
 - (void)_updatePercentage;
+- (void)_updatePercentageFont;
 - (id)initWithSizeCategory:(NSInteger)arg0;
 - (UIColor *)ampereFillColor;
 @end
@@ -105,6 +110,8 @@ static NSInteger batterySizing;
 @property (retain, nonatomic) _UIStatusBarStringView *percentView;
 + (id)staticIconDisplayIdentifier;
 + (id)iconDisplayIdentifier;
++ (id)percentDisplayIdentifier;
++ (id)chargingDisplayIdentifier;
 - (void)toggleLowPower:(id)sender;
 @end
 

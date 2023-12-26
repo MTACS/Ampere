@@ -1,7 +1,5 @@
 #include "AMPRootListController.h"
 
-#define ROOT_PATH(path)([[NSFileManager defaultManager] fileExistsAtPath:path] ? path : [@"/var/jb" stringByAppendingPathComponent:path])
-
 @import SafariServices;
 
 @implementation AMPRootListController
@@ -148,7 +146,7 @@
 }
 - (void)tableView:(UITableView *)tableView willDisplayCell:(UITableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)indexPath {
 	PSTableCell *tableCell = (PSTableCell *)cell;
-	if (([tableCell.specifier.properties[@"id"] isEqualToString:@"fontSize"] || [tableCell.specifier.properties[@"id"] isEqualToString:@"showBolt"]) && SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"16.0")) {
+	if (([tableCell.specifier.properties[@"id"] isEqualToString:@"fontSize"] || [tableCell.specifier.properties[@"id"] isEqualToString:@"showBolt"]) && SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"16.0") && [[objc_getClass("BSPlatform") sharedInstance] homeButtonType] == 2) {
 		[tableCell setCellEnabled:NO];
 	}
 }
@@ -205,7 +203,7 @@
 		titleLabel.textAlignment = NSTextAlignmentCenter;
 		
 		NSString *primary = @"Ampere";
-		NSString *secondary = @"v1.2 © MTAC";
+		NSString *secondary = @"v1.4 © MTAC";
 
 		NSMutableAttributedString *final = [[NSMutableAttributedString alloc] initWithString:[NSString stringWithFormat:@"%@\n%@", primary, secondary]];
 		[final addAttribute:NSFontAttributeName value:[UIFont systemFontOfSize:18 weight:UIFontWeightSemibold] range:[final.string rangeOfString:primary]];
