@@ -4,10 +4,15 @@
     <dict>
         <key>Filter</key>
         <dict>
-        <key>Bundles</key>
+            <key>Bundles</key>
             <array>
                 <string>com.apple.CarPlayApp</string>
                 <string>com.apple.springboard</string>
+                <string>com.apple.DashBoard</string>
+            </array>
+            <key>Executables</key>
+            <array>
+                <string>DashBoard</string>
             </array>
         </dict>
     </dict>

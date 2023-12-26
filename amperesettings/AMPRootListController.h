@@ -4,6 +4,7 @@
 #import <Preferences/PSSwitchTableCell.h>
 #import "AmpSwitch.h"
 #import "spawn.h"
+#import <objc/runtime.h>
 
 #define SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(v)  ([[[UIDevice currentDevice] systemVersion] compare:v options:NSNumericSearch] != NSOrderedAscending)
 
@@ -20,6 +21,11 @@ static NSString *domain = @"com.mtac.amp";
 
 @interface UIColor (Ampere) 
 + (id)tableCellGroupedBackgroundColor;
+@end
+
+@interface BSPlatform : NSObject
++ (id)sharedInstance;
+- (NSInteger)homeButtonType;
 @end
 
 @interface UINavigationItem (Ampere)

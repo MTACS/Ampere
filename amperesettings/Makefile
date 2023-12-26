@@ -10,5 +10,8 @@ AmpereSettings_FRAMEWORKS = UIKit
 AmpereSettings_PRIVATE_FRAMEWORKS = Preferences
 AmpereSettings_INSTALL_PATH = /Library/PreferenceBundles
 AmpereSettings_CFLAGS = -fobjc-arc -Wdeprecated-declarations -Wno-deprecated-declarations
+ifeq ($(THEOS_PACKAGE_SCHEME),roothide)
+AmpereSettings_LDFLAGS += -lroothide
+endif
 
 include $(THEOS_MAKE_PATH)/bundle.mk
